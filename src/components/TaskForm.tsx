@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task } from '../types';
+import { Task, RecurringRule, Reminder } from '../types';
 import { useStore } from '../store';
 import dayjs from 'dayjs';
 
@@ -18,6 +18,16 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
   const [endTime, setEndTime] = useState('10:00');
   const [isAllDay, setIsAllDay] = useState(false);
 
+  // Recurring state
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('weekly');
+  const [recurringInterval, setRecurringInterval] = useState(1);
+  const [recurringEndDate, setRecurringEndDate] = useState('');
+
+  // Reminder state
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderMinutes, setReminderMinutes] = useState(10);
+
   useEffect(() => {
     if (taskToEdit) {
       setTitle(taskToEdit.title);
@@ -26,6 +36,16 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
       setStartTime(dayjs(taskToEdit.startTime).format('HH:mm'));
       setEndTime(dayjs(taskToEdit.endTime).format('HH:mm'));
       setIsAllDay(taskToEdit.isAllDay);
+      setIsRecurring(taskToEdit.isRecurring);
+      if (taskToEdit.recurringRule) {
+        setRecurringFrequency(taskToEdit.recurringRule.frequency);
+        setRecurringInterval(taskToEdit.recurringRule.interval || 1);
+        setRecurringEndDate(taskToEdit.recurringRule.endDate || '');
+      }
+      if (taskToEdit.reminder) {
+        setReminderEnabled(taskToEdit.reminder.enabled);
+        setReminderMinutes(taskToEdit.reminder.beforeMinutes?.[0] || 10);
+      }
     }
   }, [taskToEdit]);
 
@@ -34,6 +54,25 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
 
     const dateStr = currentDate.format('YYYY-MM-DD');
     const now = Date.now();
+
+    // Build recurring rule
+    let recurringRule: RecurringRule | undefined;
+    if (isRecurring) {
+      recurringRule = {
+        frequency: recurringFrequency,
+        interval: recurringInterval,
+        endDate: recurringEndDate || undefined,
+      };
+    }
+
+    // Build reminder
+    let reminder: Reminder | undefined;
+    if (reminderEnabled) {
+      reminder = {
+        enabled: true,
+        beforeMinutes: [reminderMinutes],
+      };
+    }
 
     const task: Task = {
       id: taskToEdit?.id || `task-${now}`,
@@ -48,7 +87,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
         : dayjs(`${dateStr} ${endTime}`).toISOString(),
       isAllDay,
       isCompleted: false,
-      isRecurring: false,
+      isRecurring,
+      recurringRule,
+      reminder,
       createdAt: taskToEdit?.createdAt || now,
       updatedAt: now,
     };
@@ -153,6 +194,101 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
             />
             <span className="text-gray-700">全天任务</span>
           </label>
+
+          {/* Recurring Toggle */}
+          <div className="border-t border-gray-100 pt-4">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-3">
+                <span className="text-lg">🔁</span>
+                <span className="text-gray-700">重复任务</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+              />
+            </label>
+
+            {isRecurring && (
+              <div className="mt-3 pl-8 space-y-3">
+                {/* Frequency */}
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">重复频率</label>
+                  <select
+                    value={recurringFrequency}
+                    onChange={(e) => setRecurringFrequency(e.target.value as typeof recurringFrequency)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  >
+                    <option value="daily">每天</option>
+                    <option value="weekly">每周</option>
+                    <option value="monthly">每月</option>
+                    <option value="yearly">每年</option>
+                  </select>
+                </div>
+
+                {/* Interval */}
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">重复间隔</label>
+                  <select
+                    value={recurringInterval}
+                    onChange={(e) => setRecurringInterval(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  >
+                    <option value={1}>每 {recurringFrequency === 'daily' ? '天' : recurringFrequency === 'weekly' ? '周' : recurringFrequency === 'monthly' ? '月' : '年'}</option>
+                    <option value={2}>每 2 {recurringFrequency === 'daily' ? '天' : recurringFrequency === 'weekly' ? '周' : recurringFrequency === 'monthly' ? '月' : '年'}</option>
+                    <option value={3}>每 3 {recurringFrequency === 'daily' ? '天' : recurringFrequency === 'weekly' ? '周' : recurringFrequency === 'monthly' ? '月' : '年'}</option>
+                    <option value={4}>每 4 {recurringFrequency === 'daily' ? '天' : recurringFrequency === 'weekly' ? '周' : recurringFrequency === 'monthly' ? '月' : '年'}</option>
+                  </select>
+                </div>
+
+                {/* End date */}
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">结束日期（可选）</label>
+                  <input
+                    type="date"
+                    value={recurringEndDate}
+                    onChange={(e) => setRecurringEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Reminder Toggle */}
+          <div className="border-t border-gray-100 pt-4">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-3">
+                <span className="text-lg">🔔</span>
+                <span className="text-gray-700">提醒</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(e) => setReminderEnabled(e.target.checked)}
+                className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+              />
+            </label>
+
+            {reminderEnabled && (
+              <div className="mt-3 pl-8">
+                <label className="block text-sm text-gray-600 mb-1">提前提醒</label>
+                <select
+                  value={reminderMinutes}
+                  onChange={(e) => setReminderMinutes(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                >
+                  <option value={5}>5 分钟</option>
+                  <option value={10}>10 分钟</option>
+                  <option value={15}>15 分钟</option>
+                  <option value={30}>30 分钟</option>
+                  <option value={60}>1 小时</option>
+                  <option value={1440}>1 天</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           {/* Description */}
           <div>

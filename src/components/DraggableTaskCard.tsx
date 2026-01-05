@@ -1,0 +1,160 @@
+import React, { useRef, forwardRef } from 'react';
+import { useDrag, useDrop } from 'react-dnd';
+import { motion } from 'framer-motion';
+import { Task } from '../types';
+import { useStore } from '../store';
+import dayjs from 'dayjs';
+
+interface DraggableTaskCardProps {
+  task: Task;
+  index: number;
+  onEdit: (task: Task) => void;
+  moveTask: (dragIndex: number, hoverIndex: number) => void;
+}
+
+interface DragItem {
+  index: number;
+  id: string;
+  type: string;
+}
+
+export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProps>(({
+  task,
+  index,
+  onEdit,
+  moveTask,
+}, ref) => {
+  const { categories, toggleTaskComplete, removeTask } = useStore();
+  const innerRef = useRef<HTMLLIElement>(null);
+
+  const category = categories.find((c) => c.id === task.categoryId);
+  const startTime = dayjs(task.startTime);
+  const endTime = dayjs(task.endTime);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: 'TASK',
+    item: { index, id: task.id },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [, drop] = useDrop({
+    accept: 'TASK',
+    hover(item: DragItem) {
+      if (!innerRef.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      if (dragIndex !== hoverIndex) {
+        moveTask(dragIndex, hoverIndex);
+        item.index = hoverIndex;
+      }
+    },
+  });
+
+  // Connect drag and drop to the ref
+  drag(drop(innerRef));
+
+  // Merge the forwarded ref with our inner ref
+  const setRefs = (node: HTMLLIElement | null) => {
+    (innerRef as React.MutableRefObject<HTMLLIElement | null>).current = node;
+    if (typeof ref === 'function') {
+      ref(node);
+    } else if (ref) {
+      ref.current = node;
+    }
+  };
+
+  const handleComplete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleTaskComplete(task.id);
+  };
+
+  const handleEdit = () => {
+    onEdit(task);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeTask(task.id);
+  };
+
+  return (
+    <motion.li
+      ref={setRefs}
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className={`flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group cursor-grab active:cursor-grabbing ${
+        isDragging ? 'opacity-50' : ''
+      }`}
+      onClick={handleEdit}
+      style={{ opacity: isDragging ? 0.5 : 1 }}
+    >
+      {/* Drag handle */}
+      <div className="text-gray-300 hover:text-gray-400 cursor-grab">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+        </svg>
+      </div>
+
+      {/* Complete button */}
+      <button
+        onClick={handleComplete}
+        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+          task.isCompleted
+            ? 'bg-green-500 border-green-500'
+            : 'border-gray-300 hover:border-green-400 hover:scale-110'
+        }`}
+      >
+        {task.isCompleted && (
+          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </button>
+
+      {/* Category color bar */}
+      <div
+        className="w-1 h-12 rounded-full flex-shrink-0"
+        style={{ backgroundColor: category?.color || '#6B7280' }}
+      />
+
+      {/* Task info */}
+      <div className="flex-1 min-w-0">
+        <h4 className="font-medium text-gray-800 truncate">
+          {category?.icon} {task.title}
+        </h4>
+        <p className="text-xs text-gray-500">
+          {startTime.format('h:mm A')} - {endTime.format('h:mm A')}
+        </p>
+      </div>
+
+      {/* Quick actions */}
+      <button
+        onClick={handleEdit}
+        className="p-2 hover:bg-white rounded-lg transition-colors"
+        title="Edit"
+      >
+        <svg className="w-4 h-4 text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
+      </button>
+      <button
+        onClick={handleDelete}
+        className="p-2 hover:bg-white rounded-lg transition-colors"
+        title="Delete"
+      >
+        <svg className="w-4 h-4 text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    </motion.li>
+  );
+});
+
+DraggableTaskCard.displayName = 'DraggableTaskCard';

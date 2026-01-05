@@ -1,4 +1,5 @@
 import React from 'react';
+import { useStore } from '../store';
 
 interface SidebarProps {
   activeItem: string;
@@ -6,6 +7,16 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
+  const { openSettings } = useStore();
+
+  const handleItemClick = (itemId: string) => {
+    if (itemId === 'settings') {
+      openSettings();
+    } else {
+      onItemClick(itemId);
+    }
+  };
+
   const navItems = [
     { id: 'today', label: 'Today', icon: '☀️' },
     { id: 'schedule', label: 'Schedule', icon: '📅' },
@@ -13,6 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => 
     { id: 'categories', label: 'Categories', icon: '🏷️' },
     { id: 'focus', label: 'Focus', icon: '🎯' },
     { id: 'calendar', label: 'Calendar', icon: '📆' },
+    { id: 'backup', label: 'Backup & Import', icon: '💾' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },
   ];
 
@@ -32,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => 
           {navItems.map((item) => (
             <li key={item.id}>
               <button
-                onClick={() => onItemClick(item.id)}
+                onClick={() => handleItemClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   activeItem === item.id
                     ? 'bg-primary-50 text-primary-600 font-medium'

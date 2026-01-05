@@ -7,8 +7,22 @@ import {
   deleteTask,
   saveCategory,
   deleteCategory,
+  clearAllData,
 } from '../utils/db';
 import dayjs from 'dayjs';
+
+// 主题模式
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+// 应用设置
+export interface AppSettings {
+  theme: ThemeMode;
+  language: 'zh' | 'en';
+  notificationsEnabled: boolean;
+  reminderBeforeMinutes: number;
+  defaultView: ViewMode;
+  startOfWeek: number; // 0=周日, 1=周一
+}
 
 interface AppState {
   // Data
@@ -21,6 +35,11 @@ interface AppState {
   selectedTaskId: string | null;
   isAddTaskOpen: boolean;
   isEditTaskOpen: boolean;
+  isDataManagementOpen: boolean;
+  isSettingsOpen: boolean;
+
+  // Settings
+  settings: AppSettings;
 
   // Actions
   loadData: () => Promise<void>;
@@ -31,6 +50,14 @@ interface AppState {
   closeAddTask: () => void;
   openEditTask: (taskId: string) => void;
   closeEditTask: () => void;
+  openDataManagement: () => void;
+  closeDataManagement: () => void;
+  openSettings: () => void;
+  closeSettings: () => void;
+
+  // Settings Actions
+  updateSettings: (settings: Partial<AppSettings>) => void;
+  clearAllData: () => Promise<void>;
 
   // Task CRUD
   addTask: (task: Task) => Promise<void>;
@@ -66,6 +93,18 @@ export const useStore = create<AppState>((set, get) => ({
   selectedTaskId: null,
   isAddTaskOpen: false,
   isEditTaskOpen: false,
+  isDataManagementOpen: false,
+  isSettingsOpen: false,
+
+  // Initial settings
+  settings: {
+    theme: 'system',
+    language: 'zh',
+    notificationsEnabled: true,
+    reminderBeforeMinutes: 10,
+    defaultView: 'day',
+    startOfWeek: 1, // 周一开始
+  },
 
   // Actions
   loadData: async () => {
@@ -86,6 +125,23 @@ export const useStore = create<AppState>((set, get) => ({
   closeAddTask: () => set({ isAddTaskOpen: false }),
   openEditTask: (taskId) => set({ isEditTaskOpen: true, selectedTaskId: taskId }),
   closeEditTask: () => set({ isEditTaskOpen: false, selectedTaskId: null }),
+  openDataManagement: () => set({ isDataManagementOpen: true }),
+  closeDataManagement: () => set({ isDataManagementOpen: false }),
+  openSettings: () => set({ isSettingsOpen: true }),
+  closeSettings: () => set({ isSettingsOpen: false }),
+
+  // Settings Actions
+  updateSettings: (newSettings) =>
+    set((state) => ({
+      settings: { ...state.settings, ...newSettings },
+    })),
+  clearAllData: async () => {
+    await clearAllData();
+    set({
+      tasks: [],
+      categories: DEFAULT_CATEGORIES,
+    });
+  },
 
   // Task CRUD
   addTask: async (task) => {
