@@ -37,6 +37,10 @@ interface AppState {
   isEditTaskOpen: boolean;
   isDataManagementOpen: boolean;
   isSettingsOpen: boolean;
+  isCategoryManageOpen: boolean;
+
+  // Filter
+  selectedCategoryId: string | null;
 
   // Settings
   settings: AppSettings;
@@ -54,6 +58,11 @@ interface AppState {
   closeDataManagement: () => void;
   openSettings: () => void;
   closeSettings: () => void;
+  openCategoryManage: () => void;
+  closeCategoryManage: () => void;
+
+  // Filter Actions
+  setSelectedCategory: (categoryId: string | null) => void;
 
   // Settings Actions
   updateSettings: (settings: Partial<AppSettings>) => void;
@@ -95,6 +104,10 @@ export const useStore = create<AppState>((set, get) => ({
   isEditTaskOpen: false,
   isDataManagementOpen: false,
   isSettingsOpen: false,
+  isCategoryManageOpen: false,
+
+  // Filter
+  selectedCategoryId: null,
 
   // Initial settings
   settings: {
@@ -129,6 +142,11 @@ export const useStore = create<AppState>((set, get) => ({
   closeDataManagement: () => set({ isDataManagementOpen: false }),
   openSettings: () => set({ isSettingsOpen: true }),
   closeSettings: () => set({ isSettingsOpen: false }),
+  openCategoryManage: () => set({ isCategoryManageOpen: true }),
+  closeCategoryManage: () => set({ isCategoryManageOpen: false }),
+
+  // Filter Actions
+  setSelectedCategory: (categoryId) => set({ selectedCategoryId: categoryId }),
 
   // Settings Actions
   updateSettings: (newSettings) =>

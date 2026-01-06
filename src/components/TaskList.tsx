@@ -10,10 +10,19 @@ interface TaskListProps {
 }
 
 export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
-  const { tasks, updateTask, toggleTaskComplete } = useStore();
+  const { tasks, categories, updateTask, toggleTaskComplete, selectedCategoryId, setSelectedCategory, openCategoryManage } = useStore();
+
+  // Filter tasks by category if selected
+  const filteredTasks = tasks.filter((task) => {
+    // Filter by category
+    if (selectedCategoryId && task.categoryId !== selectedCategoryId) {
+      return false;
+    }
+    return true;
+  });
 
   // Get tasks sorted by time
-  const sortedTasks = tasks
+  const sortedTasks = filteredTasks
     .filter((task) => {
       const taskDate = dayjs(task.startTime);
       const today = dayjs().startOf('day');
@@ -22,7 +31,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
     .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf());
 
   // Get completed tasks
-  const completedTasks = tasks.filter((t) => t.isCompleted);
+  const completedTasks = filteredTasks.filter((t) => t.isCompleted);
 
   // Move task callback
   const moveTask = useCallback((dragIndex: number, hoverIndex: number) => {
@@ -54,6 +63,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+      {/* Header with category filter */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">Tasks</h3>
         {hasTasks && (
@@ -61,6 +71,47 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
         )}
       </div>
 
+      {/* Category Filter */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${
+              selectedCategoryId === null
+                ? 'bg-primary-500 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            全部
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id === selectedCategoryId ? null : cat.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                selectedCategoryId === cat.id
+                  ? 'text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              style={selectedCategoryId === cat.id ? { backgroundColor: cat.color } : {}}
+            >
+              <span>{cat.icon}</span>
+              <span>{cat.name}</span>
+            </button>
+          ))}
+          <button
+            onClick={openCategoryManage}
+            className="px-2 py-1.5 rounded-lg text-sm whitespace-nowrap text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            title="管理分类"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Tasks or Empty */}
       {hasTasks || hasCompleted ? (
         <>
           {/* Draggable tasks */}

@@ -1,5 +1,7 @@
 import React from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import { CategoryManage } from './CategoryManage';
 
 interface SidebarProps {
   activeItem: string;
@@ -7,11 +9,13 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
-  const { openSettings } = useStore();
+  const { openSettings, isCategoryManageOpen, closeCategoryManage } = useStore();
 
   const handleItemClick = (itemId: string) => {
     if (itemId === 'settings') {
       openSettings();
+    } else if (itemId === 'categories') {
+      // Categories opens modal instead of navigation
     } else {
       onItemClick(itemId);
     }
@@ -58,6 +62,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => 
           ))}
         </ul>
       </nav>
+
+      {/* Category Manage Modal */}
+      <AnimatePresence>
+        {isCategoryManageOpen && <CategoryManage onClose={closeCategoryManage} />}
+      </AnimatePresence>
     </aside>
   );
 };
