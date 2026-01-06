@@ -89,23 +89,23 @@ export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProp
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className={`flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group cursor-grab active:cursor-grabbing ${
+      className={`flex items-center gap-2 lg:gap-3 p-2.5 lg:p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group cursor-grab active:cursor-grabbing touch-manipulation ${
         isDragging ? 'opacity-50' : ''
       }`}
       onClick={handleEdit}
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
-      {/* Drag handle */}
-      <div className="text-gray-300 hover:text-gray-400 cursor-grab">
+      {/* Drag handle - hidden on mobile */}
+      <div className="hidden lg:block text-gray-300 hover:text-gray-400 cursor-grab">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
         </svg>
       </div>
 
-      {/* Complete button */}
+      {/* Complete button - larger on mobile */}
       <button
         onClick={handleComplete}
-        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+        className={`w-7 h-7 lg:w-6 lg:h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation min-touch-target ${
           task.isCompleted
             ? 'bg-green-500 border-green-500'
             : 'border-gray-300 hover:border-green-400 hover:scale-110'
@@ -120,13 +120,13 @@ export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProp
 
       {/* Category color bar */}
       <div
-        className="w-1 h-12 rounded-full flex-shrink-0"
+        className="w-1 h-10 lg:h-12 rounded-full flex-shrink-0"
         style={{ backgroundColor: category?.color || '#6B7280' }}
       />
 
       {/* Task info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-800 truncate">
+        <h4 className="font-medium text-gray-800 truncate text-sm lg:text-base">
           {category?.icon} {task.title}
         </h4>
         <p className="text-xs text-gray-500">
@@ -134,22 +134,22 @@ export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProp
         </p>
       </div>
 
-      {/* Quick actions */}
+      {/* Quick actions - larger touch targets */}
       <button
         onClick={handleEdit}
-        className="p-2 hover:bg-white rounded-lg transition-colors"
+        className="p-2 lg:p-2 hover:bg-white rounded-lg transition-colors touch-manipulation min-touch-target"
         title="Edit"
       >
-        <svg className="w-4 h-4 text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 lg:w-4 lg:h-4 text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
         </svg>
       </button>
       <button
         onClick={handleDelete}
-        className="p-2 hover:bg-white rounded-lg transition-colors"
+        className="p-2 lg:p-2 hover:bg-white rounded-lg transition-colors touch-manipulation min-touch-target"
         title="Delete"
       >
-        <svg className="w-4 h-4 text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 lg:w-4 lg:h-4 text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       </button>

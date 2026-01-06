@@ -62,7 +62,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
   const hasCompleted = completedTasks.length > 0;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
       {/* Header with category filter */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800">Tasks</h3>
@@ -73,10 +73,10 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
 
       {/* Category Filter */}
       <div className="mb-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors touch-manipulation min-touch-target ${
               selectedCategoryId === null
                 ? 'bg-primary-500 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -88,7 +88,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id === selectedCategoryId ? null : cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 touch-manipulation ${
                 selectedCategoryId === cat.id
                   ? 'text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -96,15 +96,15 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
               style={selectedCategoryId === cat.id ? { backgroundColor: cat.color } : {}}
             >
               <span>{cat.icon}</span>
-              <span>{cat.name}</span>
+              <span className="hidden xs:inline">{cat.name}</span>
             </button>
           ))}
           <button
             onClick={openCategoryManage}
-            className="px-2 py-1.5 rounded-lg text-sm whitespace-nowrap text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            className="px-2 py-1.5 rounded-lg text-sm whitespace-nowrap text-gray-400 hover:text-gray-600 hover:bg-gray-100 touch-manipulation min-touch-target"
             title="管理分类"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </button>
