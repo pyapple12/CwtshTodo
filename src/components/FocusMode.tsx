@@ -13,13 +13,12 @@ const TIMER_CONFIG = {
 };
 
 export const FocusMode: React.FC = () => {
-  const { tasks, categories, toggleTaskComplete } = useStore();
+  const { tasks, categories, toggleTaskComplete, addFocusSession, getTodayFocusTime } = useStore();
   const [mode, setMode] = useState<TimerMode>('focus');
   const [timeLeft, setTimeLeft] = useState(TIMER_CONFIG.focus.minutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
-  const [sessions, setSessions] = useState<{ date: number; duration: number }[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get today's incomplete tasks
@@ -28,10 +27,8 @@ export const FocusMode: React.FC = () => {
     return isToday && !t.isCompleted;
   });
 
-  // Calculate today's focus time
-  const todayFocusTime = sessions
-    .filter(s => dayjs(s.date).isSame(dayjs(), 'day'))
-    .reduce((acc, s) => acc + s.duration, 0);
+  // Calculate today's focus time from store
+  const todayFocusTime = getTodayFocusTime();
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
@@ -45,7 +42,15 @@ export const FocusMode: React.FC = () => {
 
       if (mode === 'focus') {
         setCompletedPomodoros(prev => prev + 1);
-        setSessions(prev => [...prev, { date: Date.now(), duration: TIMER_CONFIG.focus.minutes * 60 }]);
+
+        // Save focus session to IndexedDB
+        addFocusSession({
+          id: `session-${Date.now()}`,
+          taskId: selectedTask?.id,
+          duration: TIMER_CONFIG.focus.minutes * 60,
+          completedAt: Date.now(),
+          mode: 'focus',
+        });
 
         // Auto-complete task if selected
         if (selectedTask) {

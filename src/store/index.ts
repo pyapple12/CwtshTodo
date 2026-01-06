@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, Category, ViewMode } from '../types';
+import { Task, Category, ViewMode, FocusSession, Habit, HabitLog } from '../types';
 import {
   getAllTasks,
   getAllCategories,
@@ -7,8 +7,16 @@ import {
   deleteTask,
   saveCategory,
   deleteCategory,
+  getAllFocusSessions,
+  saveFocusSession,
+  getAllHabits,
+  saveHabit,
+  deleteHabit,
+  getAllHabitLogs,
+  saveHabitLog,
   clearAllData,
 } from '../utils/db';
+import { notificationService } from '../services/notifications';
 import dayjs from 'dayjs';
 
 // 主题模式
@@ -19,17 +27,51 @@ export interface AppSettings {
   theme: ThemeMode;
   language: 'zh' | 'en';
   notificationsEnabled: boolean;
+  soundEnabled: boolean;
+  notificationPermission: 'default' | 'granted' | 'denied';
   reminderBeforeMinutes: number;
   defaultView: ViewMode;
   startOfWeek: number; // 0=周日, 1=周一
+  compactMode: boolean; // 紧凑模式
+}
+
+// Theme utility functions
+export function getEffectiveTheme(userTheme: ThemeMode): 'light' | 'dark' {
+  if (userTheme === 'system') {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  }
+  return userTheme;
+}
+
+export function applyTheme(theme: ThemeMode): void {
+  const effectiveTheme = getEffectiveTheme(theme);
+  document.documentElement.setAttribute('data-theme', effectiveTheme);
+  localStorage.setItem('cwtshtodo-theme', theme);
+}
+
+// Listen for system theme changes
+export function initThemeListener(): void {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const savedTheme = localStorage.getItem('cwtshtodo-theme') as ThemeMode | null;
+    if (savedTheme === 'system' || !savedTheme) {
+      applyTheme('system');
+    }
+  });
 }
 
 interface AppState {
   // Data
   tasks: Task[];
   categories: Category[];
+  focusSessions: FocusSession[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
 
   // UI State
+  isLoading: boolean;
   currentDate: dayjs.Dayjs;
   viewMode: ViewMode;
   selectedTaskId: string | null;
@@ -66,6 +108,8 @@ interface AppState {
 
   // Settings Actions
   updateSettings: (settings: Partial<AppSettings>) => void;
+  setTheme: (theme: ThemeMode) => void;
+  requestNotificationPermission: () => Promise<void>;
   clearAllData: () => Promise<void>;
 
   // Task CRUD
@@ -79,6 +123,19 @@ interface AppState {
   updateCategory: (category: Category) => Promise<void>;
   removeCategory: (categoryId: string) => Promise<void>;
 
+  // Focus Session Actions
+  addFocusSession: (session: FocusSession) => Promise<void>;
+  getTodayFocusTime: () => number;
+  getWeekFocusStats: () => { total: number; daily: number[] };
+
+  // Habit Actions
+  addHabit: (habit: Habit) => Promise<void>;
+  updateHabit: (habit: Habit) => Promise<void>;
+  removeHabit: (habitId: string) => Promise<void>;
+  toggleHabitLog: (habitId: string, date: string) => Promise<void>;
+  getHabitLogsForWeek: (habitId: string, weekStart: dayjs.Dayjs) => HabitLog[];
+  getHabitStats: (habitId: string) => { streak: number; completionRate: number; totalCompleted: number };
+
   // Filtered data helpers
   getTasksForDate: (date: dayjs.Dayjs) => Task[];
   getFilteredTasks: () => Task[];
@@ -91,12 +148,22 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat-4', name: '运动', color: '#EF4444', icon: '🏃', createdAt: Date.now() },
 ];
 
+const DEFAULT_HABITS: Habit[] = [
+  { id: 'habit-1', name: '早起', icon: '🌅', color: '#F59E0B', targetDays: [1, 2, 3, 4, 5], createdAt: Date.now() },
+  { id: 'habit-2', name: '运动', icon: '🏃', color: '#10B981', targetDays: [1, 3, 5], createdAt: Date.now() },
+  { id: 'habit-3', name: '阅读', icon: '📚', color: '#3B82F6', targetDays: [2, 4, 6], createdAt: Date.now() },
+];
+
 export const useStore = create<AppState>((set, get) => ({
   // Initial data
   tasks: [],
   categories: DEFAULT_CATEGORIES,
+  focusSessions: [],
+  habits: [],
+  habitLogs: [],
 
   // Initial UI state
+  isLoading: true,
   currentDate: dayjs(),
   viewMode: 'day',
   selectedTaskId: null,
@@ -114,20 +181,47 @@ export const useStore = create<AppState>((set, get) => ({
     theme: 'system',
     language: 'zh',
     notificationsEnabled: true,
+    soundEnabled: true,
+    notificationPermission: notificationService.getPermissionStatus(),
     reminderBeforeMinutes: 10,
     defaultView: 'day',
     startOfWeek: 1, // 周一开始
+    compactMode: false,
   },
 
   // Actions
   loadData: async () => {
-    const [tasks, categories] = await Promise.all([
+    // Load saved theme or use default
+    const savedTheme = localStorage.getItem('cwtshtodo-theme') as ThemeMode | null;
+    const initialTheme: ThemeMode = savedTheme || 'system';
+    applyTheme(initialTheme);
+    initThemeListener();
+
+    const [tasks, categories, focusSessions, habits, habitLogs] = await Promise.all([
       getAllTasks(),
       getAllCategories(),
+      getAllFocusSessions(),
+      getAllHabits(),
+      getAllHabitLogs(),
     ]);
     set({
+      isLoading: false,
       tasks: tasks.length > 0 ? tasks : [],
       categories: categories.length > 0 ? categories : DEFAULT_CATEGORIES,
+      focusSessions: focusSessions.length > 0 ? focusSessions : [],
+      habits: habits.length > 0 ? habits : DEFAULT_HABITS,
+      habitLogs: habitLogs.length > 0 ? habitLogs : [],
+      settings: {
+        theme: initialTheme,
+        language: 'zh',
+        notificationsEnabled: true,
+        soundEnabled: true,
+        notificationPermission: notificationService.getPermissionStatus(),
+        reminderBeforeMinutes: 10,
+        defaultView: 'day',
+        startOfWeek: 1,
+        compactMode: false,
+      },
     });
   },
 
@@ -150,14 +244,42 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Settings Actions
   updateSettings: (newSettings) =>
+    set((state) => {
+      const newState = {
+        settings: { ...state.settings, ...newSettings },
+      };
+
+      // Apply theme if it was changed
+      if (newSettings.theme !== undefined) {
+        applyTheme(newSettings.theme);
+      }
+
+      return newState;
+    }),
+
+  setTheme: (theme: ThemeMode) => {
+    set((state) => {
+      const newSettings = { ...state.settings, theme };
+      applyTheme(theme);
+      return { settings: newSettings };
+    });
+  },
+
+  requestNotificationPermission: async () => {
+    const permission = await notificationService.requestPermission();
     set((state) => ({
-      settings: { ...state.settings, ...newSettings },
-    })),
+      settings: { ...state.settings, notificationPermission: permission },
+    }));
+  },
+
   clearAllData: async () => {
     await clearAllData();
     set({
       tasks: [],
       categories: DEFAULT_CATEGORIES,
+      focusSessions: [],
+      habits: DEFAULT_HABITS,
+      habitLogs: [],
     });
   },
 
@@ -212,6 +334,146 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       categories: state.categories.filter((c) => c.id !== categoryId),
     }));
+  },
+
+  // Focus Session Actions
+  addFocusSession: async (session) => {
+    await saveFocusSession(session);
+    set((state) => ({ focusSessions: [...state.focusSessions, session] }));
+  },
+
+  getTodayFocusTime: () => {
+    const state = get();
+    const today = dayjs().startOf('day').valueOf();
+    const tomorrow = dayjs().endOf('day').valueOf();
+    return state.focusSessions
+      .filter((s) => s.completedAt >= today && s.completedAt <= tomorrow)
+      .reduce((acc, s) => acc + s.duration, 0);
+  },
+
+  getWeekFocusStats: () => {
+    const state = get();
+    const weekStart = dayjs().startOf('week');
+    const daily: number[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const day = weekStart.add(i, 'day');
+      const dayStart = day.startOf('day').valueOf();
+      const dayEnd = day.endOf('day').valueOf();
+      const dayTotal = state.focusSessions
+        .filter((s) => s.completedAt >= dayStart && s.completedAt <= dayEnd)
+        .reduce((acc, s) => acc + s.duration, 0);
+      daily.push(dayTotal);
+    }
+
+    return {
+      total: daily.reduce((acc, d) => acc + d, 0),
+      daily,
+    };
+  },
+
+  // Habit Actions
+  addHabit: async (habit) => {
+    await saveHabit(habit);
+    set((state) => ({ habits: [...state.habits, habit] }));
+  },
+
+  updateHabit: async (habit) => {
+    await saveHabit(habit);
+    set((state) => ({
+      habits: state.habits.map((h) => (h.id === habit.id ? habit : h)),
+    }));
+  },
+
+  removeHabit: async (habitId) => {
+    await deleteHabit(habitId);
+    set((state) => ({
+      habits: state.habits.filter((h) => h.id !== habitId),
+      habitLogs: state.habitLogs.filter((l) => l.habitId !== habitId),
+    }));
+  },
+
+  toggleHabitLog: async (habitId, date) => {
+    const state = get();
+    const existingLog = state.habitLogs.find(
+      (l) => l.habitId === habitId && l.date === date
+    );
+
+    if (existingLog) {
+      // Toggle off
+      await import('../utils/db').then((db) => db.deleteHabitLog(existingLog.id));
+      set((state) => ({
+        habitLogs: state.habitLogs.filter((l) => l.id !== existingLog.id),
+      }));
+    } else {
+      // Toggle on
+      const newLog: HabitLog = {
+        id: `log-${habitId}-${date}`,
+        habitId,
+        date,
+        completed: true,
+        completedAt: Date.now(),
+      };
+      await saveHabitLog(newLog);
+      set((state) => ({ habitLogs: [...state.habitLogs, newLog] }));
+    }
+  },
+
+  getHabitLogsForWeek: (habitId, weekStart) => {
+    const state = get();
+    const logs: HabitLog[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const date = weekStart.add(i, 'day').format('YYYY-MM-DD');
+      const log = state.habitLogs.find((l) => l.habitId === habitId && l.date === date);
+      if (log) logs.push(log);
+    }
+
+    return logs;
+  },
+
+  getHabitStats: (habitId) => {
+    const state = get();
+    const habit = state.habits.find((h) => h.id === habitId);
+    if (!habit) return { streak: 0, completionRate: 0, totalCompleted: 0 };
+
+    const habitLogs = state.habitLogs.filter((l) => l.habitId === habitId && l.completed);
+
+    // Calculate streak
+    let streak = 0;
+    const today = dayjs();
+    for (let i = 0; i < 365; i++) {
+      const date = today.subtract(i, 'day').format('YYYY-MM-DD');
+      const log = habitLogs.find((l) => l.date === date);
+      if (log) {
+        streak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
+
+    // Calculate completion rate (last 30 days)
+    const targetDays = habit.targetDays;
+    let targetCount = 0;
+    let completedCount = 0;
+
+    for (let i = 0; i < 30; i++) {
+      const date = today.subtract(i, 'day');
+      const dayOfWeek = dayjs(date).day();
+      if (targetDays.includes(dayOfWeek)) {
+        targetCount++;
+        const log = habitLogs.find((l) => l.date === date.format('YYYY-MM-DD'));
+        if (log) completedCount++;
+      }
+    }
+
+    const completionRate = targetCount > 0 ? Math.round((completedCount / targetCount) * 100) : 0;
+
+    return {
+      streak,
+      completionRate,
+      totalCompleted: habitLogs.length,
+    };
   },
 
   // Helper functions

@@ -4,6 +4,7 @@ import { Task } from '../types';
 import { useStore } from '../store';
 import dayjs from 'dayjs';
 import { DraggableTaskCard } from './DraggableTaskCard';
+import { SwipeableTaskCard } from './SwipeableTaskCard';
 
 interface TaskListProps {
   onEditTask: (task: Task) => void;
@@ -117,13 +118,17 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
           {/* Draggable tasks */}
           <AnimatePresence mode="popLayout">
             {sortedTasks.map((task, index) => (
-              <DraggableTaskCard
+              <SwipeableTaskCard
                 key={task.id}
                 task={task}
-                index={index}
-                onEdit={onEditTask}
-                moveTask={moveTask}
-              />
+              >
+                <DraggableTaskCard
+                  task={task}
+                  index={index}
+                  onEdit={onEditTask}
+                  moveTask={moveTask}
+                />
+              </SwipeableTaskCard>
             ))}
           </AnimatePresence>
 

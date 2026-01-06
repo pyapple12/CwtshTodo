@@ -6,16 +6,90 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light;
+  color-scheme: light dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Light theme colors */
+  --color-bg-primary: #f9fafb;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f3f4f6;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-hover: #d1d5db;
+}
+
+[data-theme="dark"] {
+  /* Dark theme colors */
+  --color-bg-primary: #111827;
+  --color-bg-secondary: #1f2937;
+  --color-bg-tertiary: #374151;
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-text-tertiary: #6b7280;
+  --color-border: #374151;
+  --color-border-hover: #4b5563;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode overrides for Tailwind classes */
+[data-theme="dark"] .bg-gray-50 {
+  background-color: var(--color-bg-primary) !important;
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+[data-theme="dark"] .bg-gray-100 {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-900 {
+  color: var(--color-text-primary) !important;
+}
+
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-gray-600 {
+  color: var(--color-text-secondary) !important;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-400 {
+  color: var(--color-text-tertiary) !important;
+}
+
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-gray-100 {
+  border-color: var(--color-border) !important;
+}
+
+[data-theme="dark"] .border-gray-300 {
+  border-color: var(--color-border-hover) !important;
+}
+
+[data-theme="dark"] .hover\:bg-gray-50:hover {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+[data-theme="dark"] .hover\:bg-gray-100:hover {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+[data-theme="dark"] .hover\:text-gray-800:hover {
+  color: var(--color-text-primary) !important;
 }
 
 /* Touch interaction improvements */

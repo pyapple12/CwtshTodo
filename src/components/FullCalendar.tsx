@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store';
 import { Task } from '../types';
@@ -15,9 +15,23 @@ export const FullCalendar: React.FC = () => {
     categories,
     selectedCategoryId,
     setSelectedCategory,
+    updateTask,
   } = useStore();
 
   const [viewMode, setLocalViewMode] = React.useState<CalendarViewMode>('month');
+
+  // Drag state
+  const [draggingTask, setDraggingTask] = useState<{
+    task: Task;
+    startY: number;
+    startTop: number;
+    dayDate: dayjs.Dayjs;
+  } | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{
+    dayDate: dayjs.Dayjs;
+    top: number;
+    height: number;
+  } | null>(null);
 
   // Filter tasks
   const filteredTasks = useMemo(() => {
@@ -83,6 +97,103 @@ export const FullCalendar: React.FC = () => {
     setCurrentDate(date);
     setViewMode('day');
   };
+
+  // Drag handlers
+  const handleTaskMouseDown = useCallback((e: React.MouseEvent, task: Task, dayDate: dayjs.Dayjs) => {
+    if (task.isAllDay) return; // Don't drag all-day tasks
+
+    const taskElement = (e.target as HTMLElement).closest('.calendar-task') as HTMLElement;
+    if (!taskElement) return;
+
+    const startTop = parseFloat(taskElement.style.top || '0');
+
+    setDraggingTask({
+      task,
+      startY: e.clientY,
+      startTop,
+      dayDate,
+    });
+
+    // Prevent text selection during drag
+    e.preventDefault();
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!draggingTask) return;
+
+    const deltaY = e.clientY - draggingTask.startY;
+    const newTop = Math.max(0, Math.min(draggingTask.startTop + deltaY, 92)); // Constrain to 0-92%
+
+    // Calculate time from position
+    const totalMinutes = Math.round((newTop / 100) * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.round((totalMinutes % 60) / 15) * 15; // Snap to 15 min intervals
+
+    // Calculate task duration
+    const duration = dayjs(draggingTask.task.endTime).diff(
+      dayjs(draggingTask.task.startTime),
+      'minute'
+    );
+
+    // Update drop indicator
+    const topPercent = ((hours * 60 + minutes) / (24 * 60)) * 100;
+    const heightPercent = (duration / (24 * 60)) * 100;
+
+    setDropIndicator({
+      dayDate: draggingTask.dayDate,
+      top: topPercent,
+      height: heightPercent,
+    });
+  }, [draggingTask]);
+
+  const handleMouseUp = useCallback(async () => {
+    if (!draggingTask || !dropIndicator) {
+      setDraggingTask(null);
+      setDropIndicator(null);
+      return;
+    }
+
+    // Calculate new time
+    const duration = dayjs(draggingTask.task.endTime).diff(
+      dayjs(draggingTask.task.startTime),
+      'minute'
+    );
+
+    const totalMinutes = Math.round((dropIndicator.top / 100) * 24 * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.round((totalMinutes % 60) / 15) * 15;
+
+    const newStartTime = dropIndicator.dayDate
+      .hour(hours)
+      .minute(minutes)
+      .second(0)
+      .toISOString();
+
+    const newEndTime = dayjs(newStartTime).add(duration, 'minute').toISOString();
+
+    // Update task
+    await updateTask({
+      ...draggingTask.task,
+      startTime: newStartTime,
+      endTime: newEndTime,
+      updatedAt: Date.now(),
+    });
+
+    setDraggingTask(null);
+    setDropIndicator(null);
+  }, [draggingTask, dropIndicator, updateTask]);
+
+  // Add global mouse event listeners
+  React.useEffect(() => {
+    if (draggingTask) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingTask, handleMouseMove, handleMouseUp]);
 
   const renderMonthView = () => (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -231,6 +342,17 @@ export const FullCalendar: React.FC = () => {
                   <div className="absolute inset-0 bg-primary-50/30 pointer-events-none" />
                 )}
 
+                {/* Drop indicator */}
+                {dropIndicator && dropIndicator.dayDate.format('YYYY-MM-DD') === dateKey && (
+                  <div
+                    className="absolute left-1 right-1 rounded border-2 border-dashed border-primary-500 bg-primary-500/20"
+                    style={{
+                      top: `${dropIndicator.top}%`,
+                      height: `${dropIndicator.height}%`,
+                    }}
+                  />
+                )}
+
                 {/* Tasks positioned by time */}
                 {dayTasks.map(task => {
                   const startHour = dayjs(task.startTime).hour();
@@ -251,12 +373,16 @@ export const FullCalendar: React.FC = () => {
                       key={task.id}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="absolute left-1 right-1 rounded p-1 cursor-pointer hover:ring-2 ring-primary-400"
+                      className={`calendar-task absolute left-1 right-1 rounded p-1 cursor-move hover:ring-2 ring-primary-400 transition-shadow ${
+                        draggingTask?.task.id === task.id ? 'ring-2 ring-white scale-105 z-10 shadow-lg' : ''
+                      }`}
                       style={{
                         top: `${top}%`,
                         height: `${Math.max(height, 2)}%`,
                         backgroundColor: cat?.color || '#6B7280',
+                        cursor: task.isAllDay ? 'default' : 'grab',
                       }}
+                      onMouseDown={(e) => handleTaskMouseDown(e, task, day)}
                       title={`${task.title} (${dayjs(task.startTime).format('HH:mm')} - ${dayjs(task.endTime).format('HH:mm')})`}
                     >
                       <div className="text-white text-xs font-medium truncate">

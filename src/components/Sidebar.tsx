@@ -25,6 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => 
     { id: 'tasks', label: 'Tasks', icon: '✅' },
     { id: 'focus', label: 'Focus', icon: '🎯' },
     { id: 'calendar', label: 'Calendar', icon: '📆' },
+    { id: 'habits', label: 'Habits', icon: '✨' },
     { id: 'backup', label: 'Backup & Import', icon: '💾' },
     { id: 'categories', label: 'Categories', icon: '🏷️' },
     { id: 'settings', label: 'Settings', icon: '⚙️' },

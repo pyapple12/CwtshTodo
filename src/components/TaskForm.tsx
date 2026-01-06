@@ -9,7 +9,10 @@ interface TaskFormProps {
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
-  const { addTask, updateTask, categories, currentDate } = useStore();
+  const { addTask, updateTask, categories } = useStore();
+
+  // Date selection - default to currentDate, but can be changed
+  const [selectedDate, setSelectedDate] = useState(dayjs());
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -37,6 +40,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
       setEndTime(dayjs(taskToEdit.endTime).format('HH:mm'));
       setIsAllDay(taskToEdit.isAllDay);
       setIsRecurring(taskToEdit.isRecurring);
+      setSelectedDate(dayjs(taskToEdit.startTime)); // 设置编辑任务的日期
       if (taskToEdit.recurringRule) {
         setRecurringFrequency(taskToEdit.recurringRule.frequency);
         setRecurringInterval(taskToEdit.recurringRule.interval || 1);
@@ -52,7 +56,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const dateStr = currentDate.format('YYYY-MM-DD');
+    const dateStr = selectedDate.format('YYYY-MM-DD');
     const now = Date.now();
 
     // Build recurring rule
@@ -160,28 +164,92 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
             </select>
           </div>
 
+          {/* Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">日期</label>
+            <input
+              type="date"
+              value={selectedDate.format('YYYY-MM-DD')}
+              onChange={(e) => setSelectedDate(dayjs(e.target.value))}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            />
+          </div>
+
           {/* Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                disabled={isAllDay}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none disabled:bg-gray-100"
-              />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  disabled={isAllDay}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none disabled:bg-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  disabled={isAllDay}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none disabled:bg-gray-100"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                disabled={isAllDay}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none disabled:bg-gray-100"
-              />
-            </div>
+
+            {/* Quick time presets */}
+            {!isAllDay && (
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500 mr-1 self-center">快速设置:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const start = dayjs(`2000-01-01 ${startTime}`);
+                    setStartTime(start.add(15, 'minute').format('HH:mm'));
+                    setEndTime(start.add(45, 'minute').format('HH:mm'));
+                  }}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  +15分钟
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const start = dayjs(`2000-01-01 ${startTime}`);
+                    setStartTime(start.add(30, 'minute').format('HH:mm'));
+                    setEndTime(start.add(60, 'minute').format('HH:mm'));
+                  }}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  +30分钟
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const start = dayjs(`2000-01-01 ${startTime}`);
+                    setStartTime(start.add(60, 'minute').format('HH:mm'));
+                    setEndTime(start.add(120, 'minute').format('HH:mm'));
+                  }}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  +1小时
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const start = dayjs(`2000-01-01 ${startTime}`);
+                    setStartTime(start.add(90, 'minute').format('HH:mm'));
+                    setEndTime(start.add(180, 'minute').format('HH:mm'));
+                  }}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  +1.5小时
+                </button>
+              </div>
+            )}
           </div>
 
           {/* All day toggle */}

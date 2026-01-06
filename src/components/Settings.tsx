@@ -8,7 +8,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
-  const { settings, updateSettings, clearAllData, tasks } = useStore();
+  const { settings, setTheme, updateSettings, clearAllData, tasks } = useStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
@@ -67,7 +67,7 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
               {themeOptions.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => updateSettings({ theme: option.value })}
+                  onClick={() => setTheme(option.value)}
                   className={`p-3 rounded-xl border-2 transition-all ${
                     settings.theme === option.value
                       ? 'border-primary-500 bg-primary-50'
@@ -150,6 +150,38 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
                 type="checkbox"
                 checked={settings.notificationsEnabled}
                 onChange={(e) => updateSettings({ notificationsEnabled: e.target.checked })}
+                className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+              />
+            </label>
+          </div>
+
+          {/* Sound Toggle */}
+          <div>
+            <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <span className="text-lg">🔊</span>
+                <span className="text-gray-700">启用提示音</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.soundEnabled}
+                onChange={(e) => updateSettings({ soundEnabled: e.target.checked })}
+                className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+              />
+            </label>
+          </div>
+
+          {/* Compact Mode */}
+          <div>
+            <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📦</span>
+                <span className="text-gray-700">紧凑模式</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.compactMode}
+                onChange={(e) => updateSettings({ compactMode: e.target.checked })}
                 className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
               />
             </label>

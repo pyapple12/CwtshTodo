@@ -50,3 +50,32 @@ export interface FilterState {
     end: string;
   };
 }
+
+// 专注会话记录
+export interface FocusSession {
+  id: string;
+  taskId?: string;
+  duration: number; // 秒
+  completedAt: number;
+  mode: 'focus' | 'shortBreak' | 'longBreak';
+}
+
+// 习惯
+export interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  targetDays: number[]; // 0-6，周日到周六
+  reminderTime?: string; // HH:mm
+  createdAt: number;
+}
+
+// 习惯打卡记录
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string; // YYYY-MM-DD
+  completed: boolean;
+  completedAt?: number;
+}

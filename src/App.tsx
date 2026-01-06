@@ -6,17 +6,36 @@ import { ScheduleView } from './components/ScheduleView';
 import { AllTasks } from './components/AllTasks';
 import { FocusMode } from './components/FocusMode';
 import { FullCalendar } from './components/FullCalendar';
+import { Habits } from './components/Habits';
 import { DataManagement } from './components/DataManagement';
 import { Settings } from './components/Settings';
 import { CategoryManage } from './components/CategoryManage';
 import { BottomNav } from './components/BottomNav';
 import { DnDProviderWrapper } from './components/DnDProvider';
 import { useStore } from './store';
+import { useDefaultKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { Loading } from './components/Loading';
+import { useEffect } from 'react';
 
 function App() {
+  // All hooks must be called unconditionally at the top
+  const { isLoading, loadData, isSettingsOpen, closeSettings, isCategoryManageOpen, closeCategoryManage } = useStore();
+
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Enable keyboard shortcuts (works after loading, no-op during loading)
+  useDefaultKeyboardShortcuts();
+
   const [activeItem, setActiveItem] = useState('today');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isSettingsOpen, closeSettings, isCategoryManageOpen, closeCategoryManage } = useStore();
+
+  // Show loading screen while data loads
+  if (isLoading) {
+    return <Loading />;
+  }
 
   const renderContent = () => {
     switch (activeItem) {
@@ -30,6 +49,8 @@ function App() {
         return <FocusMode />;
       case 'calendar':
         return <FullCalendar />;
+      case 'habits':
+        return <Habits />;
       case 'categories':
         return <Dashboard />; // Categories is handled via modal
       case 'backup':
