@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Task } from '../types';
+import { WhiteNoisePanel } from './WhiteNoisePanel';
 import dayjs from 'dayjs';
 
 type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
@@ -327,6 +328,11 @@ export const FocusMode: React.FC = () => {
                   <li>• 每4个番茄后长休息</li>
                 </ul>
               </div>
+            </div>
+
+            {/* White Noise Panel */}
+            <div className="mt-6">
+              <WhiteNoisePanel compact />
             </div>
           </div>
         </div>

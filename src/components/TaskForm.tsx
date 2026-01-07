@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, RecurringRule, Reminder } from '../types';
+import { Task, RecurringRule, Reminder, TaskPriority } from '../types';
 import { useStore } from '../store';
 import dayjs from 'dayjs';
 
@@ -7,6 +7,14 @@ interface TaskFormProps {
   taskToEdit?: Task | null;
   onClose: () => void;
 }
+
+// Priority options with colors and labels
+const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string; bgColor: string }[] = [
+  { value: 'high', label: '高', color: '#EF4444', bgColor: '#FEE2E2' },
+  { value: 'medium', label: '中', color: '#F59E0B', bgColor: '#FEF3C7' },
+  { value: 'low', label: '低', color: '#10B981', bgColor: '#D1FAE5' },
+  { value: 'none', label: '无', color: '#6B7280', bgColor: '#F3F4F6' },
+];
 
 export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
   const { addTask, updateTask, categories, settings } = useStore();
@@ -17,6 +25,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState(settings.defaultCategoryId);
+  const [priority, setPriority] = useState<TaskPriority>('none');
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState(() => {
     const end = dayjs().startOf('hour').add(settings.defaultDuration, 'minute');
@@ -39,6 +48,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
       setTitle(taskToEdit.title);
       setDescription(taskToEdit.description || '');
       setCategoryId(taskToEdit.categoryId || '');
+      setPriority(taskToEdit.priority || 'none');
       setStartTime(dayjs(taskToEdit.startTime).format('HH:mm'));
       setEndTime(dayjs(taskToEdit.endTime).format('HH:mm'));
       setIsAllDay(taskToEdit.isAllDay);
@@ -86,6 +96,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
       title: title.trim(),
       description: description.trim() || undefined,
       categoryId: categoryId || undefined,
+      priority,
       startTime: isAllDay
         ? dayjs(`${dateStr} 00:00`).toISOString()
         : dayjs(`${dateStr} ${startTime}`).toISOString(),
@@ -165,6 +176,32 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Priority */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">优先级</label>
+            <div className="flex gap-2">
+              {PRIORITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPriority(option.value)}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    priority === option.value
+                      ? 'ring-2 ring-offset-1'
+                      : 'hover:bg-gray-100'
+                  }`}
+                  style={{
+                    backgroundColor: priority === option.value ? option.bgColor : undefined,
+                    color: option.color,
+                    '--tw-ring-color': option.color,
+                  } as React.CSSProperties}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Date */}

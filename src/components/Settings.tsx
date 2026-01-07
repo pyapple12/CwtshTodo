@@ -8,7 +8,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
-  const { settings, setTheme, updateSettings, clearAllData, tasks, categories } = useStore();
+  const { settings, setTheme, updateSettings, clearAllData, tasks, categories, openShortcutsModal } = useStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
@@ -31,6 +31,11 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   const startOfWeekOptions: { value: number; label: string }[] = [
     { value: 0, label: '周日' },
     { value: 1, label: '周一' },
+  ];
+
+  const backupFrequencyOptions: { value: 'daily' | 'weekly'; label: string }[] = [
+    { value: 'daily', label: '每日' },
+    { value: 'weekly', label: '每周' },
   ];
 
   const handleClearData = async () => {
@@ -155,6 +160,49 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             </label>
           </div>
 
+          {/* Notification Enhancements */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">通知增强</h3>
+            <div className="space-y-3">
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">⏰</span>
+                  <span className="text-gray-700">任务中提醒</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.reminderMidway}
+                  onChange={(e) => updateSettings({ reminderMidway: e.target.checked })}
+                  className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+                />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">⚠️</span>
+                  <span className="text-gray-700">即将过期提醒</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.reminderBeforeEnd}
+                  onChange={(e) => updateSettings({ reminderBeforeEnd: e.target.checked })}
+                  className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+                />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🎯</span>
+                  <span className="text-gray-700">专注时段提醒</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.reminderFocusSession}
+                  onChange={(e) => updateSettings({ reminderFocusSession: e.target.checked })}
+                  className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+                />
+              </label>
+            </div>
+          </div>
+
           {/* Sound Toggle */}
           <div>
             <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
@@ -185,6 +233,111 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
                 className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
               />
             </label>
+          </div>
+
+          {/* Keyboard Shortcuts */}
+          <div>
+            <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <span className="text-lg">⌨️</span>
+                <div>
+                  <span className="text-gray-700 block">启用快捷键</span>
+                  <span className="text-xs text-gray-400">按 ? 查看快捷键</span>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.shortcutsEnabled}
+                onChange={(e) => updateSettings({ shortcutsEnabled: e.target.checked })}
+                className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+              />
+            </label>
+            <button
+              onClick={openShortcutsModal}
+              className="mt-2 text-sm text-primary-600 hover:text-primary-700"
+            >
+              查看所有快捷键 →
+            </button>
+          </div>
+
+          {/* Auto Backup */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">自动备份</h3>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">💾</span>
+                  <span className="text-gray-700">启用自动备份</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.autoBackup.enabled}
+                  onChange={(e) => updateSettings({
+                    autoBackup: { ...settings.autoBackup, enabled: e.target.checked }
+                  })}
+                  className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+                />
+              </label>
+
+              {settings.autoBackup.enabled && (
+                <>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">备份频率</label>
+                    <div className="flex gap-3">
+                      {backupFrequencyOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => updateSettings({
+                            autoBackup: { ...settings.autoBackup, frequency: option.value }
+                          })}
+                          className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
+                            settings.autoBackup.frequency === option.value
+                              ? 'border-primary-500 bg-primary-50 text-primary-600'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">备份时间</label>
+                    <input
+                      type="time"
+                      value={settings.autoBackup.time}
+                      onChange={(e) => updateSettings({
+                        autoBackup: { ...settings.autoBackup, time: e.target.value }
+                      })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">保留备份数量</label>
+                    <select
+                      value={settings.autoBackup.maxBackups}
+                      onChange={(e) => updateSettings({
+                        autoBackup: { ...settings.autoBackup, maxBackups: Number(e.target.value) }
+                      })}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    >
+                      <option value={3}>3 个</option>
+                      <option value={5}>5 个</option>
+                      <option value={7}>7 个</option>
+                      <option value={14}>14 个</option>
+                    </select>
+                  </div>
+
+                  {settings.autoBackup.lastBackupAt && (
+                    <p className="text-sm text-gray-500">
+                      上次备份: {new Date(settings.autoBackup.lastBackupAt).toLocaleString()}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Default Task Settings */}

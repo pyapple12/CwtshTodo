@@ -84,7 +84,7 @@ export const Dashboard: React.FC = () => {
           {/* Right Column - Side Modules */}
           <div className="col-span-12 lg:col-span-4 space-y-4 lg:space-y-6">
             {/* Calendar Card */}
-            <CalendarCard title="Calendar" />
+            <CalendarCard title="Calendar" onAddTask={handleAddTask} />
 
             {/* Ring Timer */}
             <RingTimer title="Focus Timer" timeText={`${focusProgress}%`} progress={focusProgress} />

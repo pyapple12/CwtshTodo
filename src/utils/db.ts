@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { Task, Category, FocusSession, Habit, HabitLog } from '../types';
+import { Task, Category, FocusSession, Habit, HabitLog, TaskTemplate } from '../types';
 
 interface CwtshTodoDB extends DBSchema {
   tasks: {
@@ -25,10 +25,14 @@ interface CwtshTodoDB extends DBSchema {
     value: HabitLog;
     indexes: { 'by-habit': string; 'by-date': string };
   };
+  taskTemplates: {
+    key: string;
+    value: TaskTemplate;
+  };
 }
 
 const DB_NAME = 'cwtshtodo-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<CwtshTodoDB>> | null = null;
 
@@ -61,6 +65,10 @@ export function getDB(): Promise<IDBPDatabase<CwtshTodoDB>> {
           const logStore = db.createObjectStore('habitLogs', { keyPath: 'id' });
           logStore.createIndex('by-habit', 'habitId');
           logStore.createIndex('by-date', 'date');
+        }
+        // Task templates store (v3)
+        if (!db.objectStoreNames.contains('taskTemplates')) {
+          db.createObjectStore('taskTemplates', { keyPath: 'id' });
         }
       },
     });
@@ -207,4 +215,66 @@ export async function saveHabitLog(log: HabitLog): Promise<void> {
 export async function deleteHabitLog(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('habitLogs', id);
+}
+
+// ========== Task Template Operations ==========
+
+export async function getAllTaskTemplates(): Promise<TaskTemplate[]> {
+  const db = await getDB();
+  return db.getAll('taskTemplates');
+}
+
+export async function saveTaskTemplate(template: TaskTemplate): Promise<void> {
+  const db = await getDB();
+  await db.put('taskTemplates', template);
+}
+
+export async function deleteTaskTemplate(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('taskTemplates', id);
+}
+
+// ========== Import/Export with All Data ==========
+
+export async function exportAllData(): Promise<{
+  tasks: Task[];
+  categories: Category[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  focusSessions: FocusSession[];
+  taskTemplates: TaskTemplate[];
+}> {
+  const [tasks, categories, habits, habitLogs, focusSessions, taskTemplates] = await Promise.all([
+    getAllTasks(),
+    getAllCategories(),
+    getAllHabits(),
+    getAllHabitLogs(),
+    getAllFocusSessions(),
+    getAllTaskTemplates(),
+  ]);
+  return { tasks, categories, habits, habitLogs, focusSessions, taskTemplates };
+}
+
+export async function importAllData(data: {
+  tasks: Task[];
+  categories: Category[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  focusSessions: FocusSession[];
+  taskTemplates: TaskTemplate[];
+}): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction(
+    ['tasks', 'categories', 'habits', 'habitLogs', 'focusSessions', 'taskTemplates'],
+    'readwrite'
+  );
+  await Promise.all([
+    ...data.tasks.map(task => tx.objectStore('tasks').put(task)),
+    ...data.categories.map(category => tx.objectStore('categories').put(category)),
+    ...data.habits.map(habit => tx.objectStore('habits').put(habit)),
+    ...data.habitLogs.map(log => tx.objectStore('habitLogs').put(log)),
+    ...data.focusSessions.map(session => tx.objectStore('focusSessions').put(session)),
+    ...data.taskTemplates.map(template => tx.objectStore('taskTemplates').put(template)),
+    tx.done,
+  ]);
 }

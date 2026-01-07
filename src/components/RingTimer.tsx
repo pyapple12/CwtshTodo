@@ -1,17 +1,73 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useStore } from '../store';
+import dayjs from 'dayjs';
 
 interface RingTimerProps {
   title: string;
-  timeText: string;
+  timeText?: string;
   progress?: number;
 }
 
-export const RingTimer: React.FC<RingTimerProps> = ({ title, timeText, progress = 65 }) => {
+export const RingTimer: React.FC<RingTimerProps> = ({ title }) => {
+  const { tasks, focusSessions } = useStore();
+
+  // Calculate real stats
+  const stats = useMemo(() => {
+    const today = dayjs();
+    const todayStart = today.startOf('day').valueOf();
+    const todayEnd = today.endOf('day').valueOf();
+
+    // Today's tasks
+    const todayTasks = tasks.filter(t => {
+      const taskDate = dayjs(t.startTime).valueOf();
+      return taskDate >= todayStart && taskDate <= todayEnd;
+    });
+
+    const totalTasks = todayTasks.length;
+    const completedTasks = todayTasks.filter(t => t.isCompleted).length;
+    const pendingTasks = totalTasks - completedTasks;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Today's focus time
+    const todayFocusMinutes = focusSessions
+      .filter(s => s.completedAt >= todayStart && s.completedAt <= todayEnd)
+      .reduce((acc, s) => acc + Math.round(s.duration / 60), 0);
+
+    // Today's focus sessions count
+    const todayFocusSessions = focusSessions.filter(s =>
+      s.completedAt >= todayStart && s.completedAt <= todayEnd
+    ).length;
+
+    // Focus goal (e.g., 2 hours = 120 minutes per day)
+    const focusGoal = 120;
+    const focusProgress = Math.min(Math.round((todayFocusMinutes / focusGoal) * 100), 100);
+
+    return {
+      completionRate,
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      todayFocusMinutes,
+      todayFocusSessions,
+      focusProgress,
+    };
+  }, [tasks, focusSessions]);
+
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const strokeDashoffset = circumference - (stats.completionRate / 100) * circumference;
 
   const colors = ['#10B981', '#14B8A6', '#EAB308', '#F97316', '#EF4444', '#8B5CF6'];
+
+  // Format focus time
+  const formatFocusTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -60,24 +116,26 @@ export const RingTimer: React.FC<RingTimerProps> = ({ title, timeText, progress 
 
           {/* Timer text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-gray-800">{timeText}</span>
-            <span className="text-xs text-gray-500 mt-1">remaining</span>
+            <span className="text-3xl font-bold text-gray-800">{stats.completionRate}%</span>
+            <span className="text-xs text-gray-500">完成率</span>
           </div>
         </div>
       </div>
 
-      {/* Percent labels */}
+      {/* Real stats labels */}
       <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: 'Completed', value: '65%' },
-          { label: 'Focus', value: '45%' },
-          { label: 'Breaks', value: '20%' },
-        ].map((item) => (
-          <div key={item.label} className="text-center p-2 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">{item.label}</p>
-            <p className="text-sm font-semibold text-gray-800">{item.value}</p>
-          </div>
-        ))}
+        <div className="text-center p-2 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">已完成</p>
+          <p className="text-sm font-semibold text-green-600">{stats.completedTasks}</p>
+        </div>
+        <div className="text-center p-2 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">待完成</p>
+          <p className="text-sm font-semibold text-amber-600">{stats.pendingTasks}</p>
+        </div>
+        <div className="text-center p-2 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">专注时长</p>
+          <p className="text-sm font-semibold text-primary-600">{formatFocusTime(stats.todayFocusMinutes)}</p>
+        </div>
       </div>
     </div>
   );

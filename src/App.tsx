@@ -16,11 +16,14 @@ import { DnDProviderWrapper } from './components/DnDProvider';
 import { useStore } from './store';
 import { useDefaultKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Loading } from './components/Loading';
+import { ShortcutsModal } from './components/ShortcutsModal';
+import { TaskTemplates } from './components/TaskTemplates';
+import { Reports } from './components/Reports';
 import { useEffect } from 'react';
 
 function App() {
   // All hooks must be called unconditionally at the top
-  const { isLoading, loadData, isSettingsOpen, closeSettings, isCategoryManageOpen, closeCategoryManage } = useStore();
+  const { isLoading, loadData, isSettingsOpen, closeSettings, isCategoryManageOpen, closeCategoryManage, isShortcutsModalOpen } = useStore();
 
   // Load data on mount
   useEffect(() => {
@@ -32,6 +35,8 @@ function App() {
 
   const [activeItem, setActiveItem] = useState('today');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showReports, setShowReports] = useState(false);
 
   // Show loading screen while data loads
   if (isLoading) {
@@ -56,6 +61,12 @@ function App() {
         return <Stats />;
       case 'categories':
         return <Dashboard />; // Categories is handled via modal
+      case 'templates':
+        setShowTemplates(true);
+        return <Dashboard />;
+      case 'reports':
+        setShowReports(true);
+        return <Dashboard />;
       case 'backup':
         return <DataManagement />;
       case 'settings':
@@ -140,6 +151,29 @@ function App() {
         {/* Category Manage Modal */}
         <AnimatePresence>
           {isCategoryManageOpen && <CategoryManage onClose={closeCategoryManage} />}
+        </AnimatePresence>
+
+        {/* Shortcuts Modal */}
+        <AnimatePresence>
+          {isShortcutsModalOpen && (
+            <>
+              <ShortcutsModal />
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Task Templates Modal */}
+        <AnimatePresence>
+          {showTemplates && (
+            <TaskTemplates onClose={() => { setShowTemplates(false); setActiveItem('today'); }} />
+          )}
+        </AnimatePresence>
+
+        {/* Reports Modal */}
+        <AnimatePresence>
+          {showReports && (
+            <Reports onClose={() => { setShowReports(false); setActiveItem('today'); }} />
+          )}
         </AnimatePresence>
       </div>
     </DnDProviderWrapper>

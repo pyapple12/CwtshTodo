@@ -6,9 +6,10 @@ type ViewMode = 'day' | 'week' | 'month';
 
 interface CalendarCardProps {
   title: string;
+  onAddTask?: () => void;
 }
 
-export const CalendarCard: React.FC<CalendarCardProps> = ({ title }) => {
+export const CalendarCard: React.FC<CalendarCardProps> = ({ title, onAddTask }) => {
   const { tasks, categories } = useStore();
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(dayjs());
@@ -260,7 +261,10 @@ export const CalendarCard: React.FC<CalendarCardProps> = ({ title }) => {
         >
           Today
         </button>
-        <button className="flex-1 px-3 py-2 text-sm text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors">
+        <button
+          onClick={() => onAddTask?.()}
+          className="flex-1 px-3 py-2 text-sm text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors"
+        >
           Add Event
         </button>
       </div>

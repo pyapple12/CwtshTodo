@@ -1,8 +1,9 @@
 import React, { useRef, forwardRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { motion } from 'framer-motion';
-import { Task } from '../types';
+import { Task, TaskPriority } from '../types';
 import { useStore } from '../store';
+import { exportAndDownloadTask } from '../utils/exportImage';
 import dayjs from 'dayjs';
 
 interface DraggableTaskCardProps {
@@ -17,6 +18,22 @@ interface DragItem {
   id: string;
   type: string;
 }
+
+// Priority colors
+const PRIORITY_COLORS: Record<TaskPriority, string> = {
+  high: '#EF4444',
+  medium: '#F59E0B',
+  low: '#10B981',
+  none: '#6B7280',
+};
+
+// Priority icons
+const PRIORITY_ICONS: Record<TaskPriority, string> = {
+  high: '⬆️',
+  medium: '▬',
+  low: '⬇️',
+  none: '',
+};
 
 export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProps>(({
   task,
@@ -83,6 +100,11 @@ export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProp
     removeTask(task.id);
   };
 
+  const handleExport = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await exportAndDownloadTask(task, category);
+  };
+
   return (
     <motion.li
       ref={setRefs}
@@ -125,6 +147,22 @@ export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProp
         style={{ backgroundColor: category?.color || '#6B7280' }}
       />
 
+      {/* Priority indicator */}
+      {task.priority && task.priority !== 'none' && (
+        <div
+          className={`${compactMode ? 'w-4 h-4 text-xs' : 'w-5 h-5'} rounded flex items-center justify-center flex-shrink-0`}
+          style={{ backgroundColor: `${PRIORITY_COLORS[task.priority]}20` }}
+          title={task.priority === 'high' ? '高优先级' : task.priority === 'medium' ? '中优先级' : '低优先级'}
+        >
+          <span
+            className={compactMode ? 'text-[10px]' : 'text-xs'}
+            style={{ color: PRIORITY_COLORS[task.priority] }}
+          >
+            {PRIORITY_ICONS[task.priority]}
+          </span>
+        </div>
+      )}
+
       {/* Task info */}
       <div className="flex-1 min-w-0">
         <h4 className={`font-medium text-gray-800 truncate ${compactMode ? 'text-xs' : 'text-sm lg:text-base'}`}>
@@ -146,6 +184,15 @@ export const DraggableTaskCard = forwardRef<HTMLLIElement, DraggableTaskCardProp
         >
           <svg className="w-4 h-4 text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+        <button
+          onClick={handleExport}
+          className="p-1.5 hover:bg-white rounded-lg transition-colors"
+          title="Export as Image"
+        >
+          <svg className="w-4 h-4 text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </button>
         <button

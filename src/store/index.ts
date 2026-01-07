@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, Category, ViewMode, FocusSession, Habit, HabitLog } from '../types';
+import { Task, Category, ViewMode, FocusSession, Habit, HabitLog, TaskTemplate, AutoBackupSettings } from '../types';
 import {
   getAllTasks,
   getAllCategories,
@@ -14,10 +14,25 @@ import {
   deleteHabit,
   getAllHabitLogs,
   saveHabitLog,
+  getAllTaskTemplates,
+  saveTaskTemplate,
+  deleteTaskTemplate,
   clearAllData,
 } from '../utils/db';
 import { notificationService } from '../services/notifications';
 import dayjs from 'dayjs';
+
+// Maximum number of undo steps
+const MAX_HISTORY_SIZE = 50;
+
+// State snapshot type for undo/redo
+interface StateSnapshot {
+  tasks: Task[];
+  categories: Category[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  timestamp: number;
+}
 
 // 主题模式
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -38,6 +53,14 @@ export interface AppSettings {
   defaultIsAllDay: boolean; // 默认全天任务
   defaultReminder: boolean; // 默认开启提醒
   defaultDuration: number; // 默认任务时长（分钟）
+  // 快捷键设置
+  shortcutsEnabled: boolean; // 是否启用快捷键
+  // 自动备份设置
+  autoBackup: AutoBackupSettings;
+  // 通知增强设置
+  reminderMidway: boolean; // 任务中提醒
+  reminderBeforeEnd: boolean; // 即将过期提醒
+  reminderFocusSession: boolean; // 专注时段提醒
 }
 
 // Theme utility functions
@@ -74,6 +97,7 @@ interface AppState {
   focusSessions: FocusSession[];
   habits: Habit[];
   habitLogs: HabitLog[];
+  taskTemplates: TaskTemplate[];
 
   // UI State
   isLoading: boolean;
@@ -85,12 +109,17 @@ interface AppState {
   isDataManagementOpen: boolean;
   isSettingsOpen: boolean;
   isCategoryManageOpen: boolean;
+  isShortcutsModalOpen: boolean; // 快捷键提示面板
 
   // Filter
   selectedCategoryId: string | null;
 
   // Settings
   settings: AppSettings;
+
+  // Undo/Redo History
+  history: StateSnapshot[];
+  historyIndex: number;
 
   // Actions
   loadData: () => Promise<void>;
@@ -107,6 +136,8 @@ interface AppState {
   closeSettings: () => void;
   openCategoryManage: () => void;
   closeCategoryManage: () => void;
+  openShortcutsModal: () => void;
+  closeShortcutsModal: () => void;
 
   // Filter Actions
   setSelectedCategory: (categoryId: string | null) => void;
@@ -116,6 +147,13 @@ interface AppState {
   setTheme: (theme: ThemeMode) => void;
   requestNotificationPermission: () => Promise<void>;
   clearAllData: () => Promise<void>;
+
+  // Undo/Redo Actions
+  saveToHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 
   // Task CRUD
   addTask: (task: Task) => Promise<void>;
@@ -141,6 +179,12 @@ interface AppState {
   getHabitLogsForWeek: (habitId: string, weekStart: dayjs.Dayjs) => HabitLog[];
   getHabitStats: (habitId: string) => { streak: number; completionRate: number; totalCompleted: number };
 
+  // Task Template Actions
+  addTaskTemplate: (template: TaskTemplate) => Promise<void>;
+  updateTaskTemplate: (template: TaskTemplate) => Promise<void>;
+  removeTaskTemplate: (templateId: string) => Promise<void>;
+  createTaskFromTemplate: (templateId: string, date: dayjs.Dayjs) => Promise<void>;
+
   // Filtered data helpers
   getTasksForDate: (date: dayjs.Dayjs) => Task[];
   getFilteredTasks: () => Task[];
@@ -159,6 +203,52 @@ const DEFAULT_HABITS: Habit[] = [
   { id: 'habit-3', name: '阅读', icon: '📚', color: '#3B82F6', targetDays: [2, 4, 6], createdAt: Date.now() },
 ];
 
+const DEFAULT_TASK_TEMPLATES: TaskTemplate[] = [
+  {
+    id: 'template-1',
+    name: '每日站会',
+    description: '团队每日同步会议',
+    defaultDuration: 30,
+    isAllDay: false,
+    reminderEnabled: true,
+    reminderBeforeMinutes: [10],
+    icon: '📋',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    id: 'template-2',
+    name: '周报总结',
+    description: '每周工作总结与计划',
+    defaultDuration: 60,
+    isAllDay: false,
+    reminderEnabled: true,
+    reminderBeforeMinutes: [15],
+    icon: '📊',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    id: 'template-3',
+    name: '健身锻炼',
+    description: '日常运动锻炼',
+    defaultDuration: 45,
+    isAllDay: false,
+    reminderEnabled: true,
+    reminderBeforeMinutes: [10],
+    icon: '💪',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+];
+
+const DEFAULT_AUTO_BACKUP: AutoBackupSettings = {
+  enabled: false,
+  frequency: 'daily',
+  time: '03:00',
+  maxBackups: 7,
+};
+
 export const useStore = create<AppState>((set, get) => ({
   // Initial data
   tasks: [],
@@ -166,6 +256,7 @@ export const useStore = create<AppState>((set, get) => ({
   focusSessions: [],
   habits: [],
   habitLogs: [],
+  taskTemplates: [],
 
   // Initial UI state
   isLoading: true,
@@ -177,9 +268,14 @@ export const useStore = create<AppState>((set, get) => ({
   isDataManagementOpen: false,
   isSettingsOpen: false,
   isCategoryManageOpen: false,
+  isShortcutsModalOpen: false,
 
   // Filter
   selectedCategoryId: null,
+
+  // Undo/Redo History
+  history: [],
+  historyIndex: -1,
 
   // Initial settings
   settings: {
@@ -197,6 +293,14 @@ export const useStore = create<AppState>((set, get) => ({
     defaultIsAllDay: false,
     defaultReminder: false,
     defaultDuration: 60,
+    // 快捷键设置
+    shortcutsEnabled: true,
+    // 自动备份设置
+    autoBackup: DEFAULT_AUTO_BACKUP,
+    // 通知增强设置
+    reminderMidway: false,
+    reminderBeforeEnd: true,
+    reminderFocusSession: true,
   },
 
   // Actions
@@ -207,12 +311,13 @@ export const useStore = create<AppState>((set, get) => ({
     applyTheme(initialTheme);
     initThemeListener();
 
-    const [tasks, categories, focusSessions, habits, habitLogs] = await Promise.all([
+    const [tasks, categories, focusSessions, habits, habitLogs, taskTemplates] = await Promise.all([
       getAllTasks(),
       getAllCategories(),
       getAllFocusSessions(),
       getAllHabits(),
       getAllHabitLogs(),
+      getAllTaskTemplates(),
     ]);
     set({
       isLoading: false,
@@ -221,6 +326,7 @@ export const useStore = create<AppState>((set, get) => ({
       focusSessions: focusSessions.length > 0 ? focusSessions : [],
       habits: habits.length > 0 ? habits : DEFAULT_HABITS,
       habitLogs: habitLogs.length > 0 ? habitLogs : [],
+      taskTemplates: taskTemplates.length > 0 ? taskTemplates : DEFAULT_TASK_TEMPLATES,
       settings: {
         theme: initialTheme,
         language: 'zh',
@@ -235,6 +341,11 @@ export const useStore = create<AppState>((set, get) => ({
         defaultIsAllDay: false,
         defaultReminder: false,
         defaultDuration: 60,
+        shortcutsEnabled: true,
+        autoBackup: DEFAULT_AUTO_BACKUP,
+        reminderMidway: false,
+        reminderBeforeEnd: true,
+        reminderFocusSession: true,
       },
     });
   },
@@ -252,6 +363,8 @@ export const useStore = create<AppState>((set, get) => ({
   closeSettings: () => set({ isSettingsOpen: false }),
   openCategoryManage: () => set({ isCategoryManageOpen: true }),
   closeCategoryManage: () => set({ isCategoryManageOpen: false }),
+  openShortcutsModal: () => set({ isShortcutsModalOpen: true }),
+  closeShortcutsModal: () => set({ isShortcutsModalOpen: false }),
 
   // Filter Actions
   setSelectedCategory: (categoryId) => set({ selectedCategoryId: categoryId }),
@@ -294,23 +407,103 @@ export const useStore = create<AppState>((set, get) => ({
       focusSessions: [],
       habits: DEFAULT_HABITS,
       habitLogs: [],
+      history: [],
+      historyIndex: -1,
     });
+  },
+
+  // Undo/Redo Actions
+  saveToHistory: () => {
+    const state = get();
+    const snapshot: StateSnapshot = {
+      tasks: [...state.tasks],
+      categories: [...state.categories],
+      habits: [...state.habits],
+      habitLogs: [...state.habitLogs],
+      timestamp: Date.now(),
+    };
+
+    set((prevState) => {
+      // Remove any future states if we're not at the end
+      const newHistory = prevState.history.slice(0, prevState.historyIndex + 1);
+      // Add new snapshot
+      newHistory.push(snapshot);
+      // Limit history size
+      if (newHistory.length > MAX_HISTORY_SIZE) {
+        newHistory.shift();
+      }
+      return {
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+      };
+    });
+  },
+
+  undo: () => {
+    const state = get();
+    if (state.historyIndex > 0) {
+      const prevIndex = state.historyIndex - 1;
+      const snapshot = state.history[prevIndex];
+
+      // Restore state from snapshot
+      set({
+        tasks: snapshot.tasks,
+        categories: snapshot.categories,
+        habits: snapshot.habits,
+        habitLogs: snapshot.habitLogs,
+        historyIndex: prevIndex,
+      });
+    }
+  },
+
+  redo: () => {
+    const state = get();
+    if (state.historyIndex < state.history.length - 1) {
+      const nextIndex = state.historyIndex + 1;
+      const snapshot = state.history[nextIndex];
+
+      // Restore state from snapshot
+      set({
+        tasks: snapshot.tasks,
+        categories: snapshot.categories,
+        habits: snapshot.habits,
+        habitLogs: snapshot.habitLogs,
+        historyIndex: nextIndex,
+      });
+    }
+  },
+
+  canUndo: () => {
+    const state = get();
+    return state.historyIndex > 0;
+  },
+
+  canRedo: () => {
+    const state = get();
+    return state.historyIndex < state.history.length - 1;
   },
 
   // Task CRUD
   addTask: async (task) => {
-    await saveTask(task);
-    set((state) => ({ tasks: [...state.tasks, task] }));
+    get().saveToHistory(); // Save state before modifying
+    // Ensure priority has a default value
+    const taskWithPriority = { ...task, priority: task.priority || 'none' };
+    await saveTask(taskWithPriority);
+    set((state) => ({ tasks: [...state.tasks, taskWithPriority] }));
   },
 
   updateTask: async (task) => {
-    await saveTask(task);
+    get().saveToHistory(); // Save state before modifying
+    // Ensure priority has a default value
+    const taskWithPriority = { ...task, priority: task.priority || 'none' };
+    await saveTask(taskWithPriority);
     set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === task.id ? task : t)),
+      tasks: state.tasks.map((t) => (t.id === task.id ? taskWithPriority : t)),
     }));
   },
 
   removeTask: async (taskId) => {
+    get().saveToHistory(); // Save state before modifying
     await deleteTask(taskId);
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== taskId),
@@ -319,6 +512,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleTaskComplete: async (taskId) => {
+    get().saveToHistory(); // Save state before modifying
     const state = get();
     const task = state.tasks.find((t) => t.id === taskId);
     if (task) {
@@ -332,11 +526,13 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Category CRUD
   addCategory: async (category) => {
+    get().saveToHistory(); // Save state before modifying
     await saveCategory(category);
     set((state) => ({ categories: [...state.categories, category] }));
   },
 
   updateCategory: async (category) => {
+    get().saveToHistory(); // Save state before modifying
     await saveCategory(category);
     set((state) => ({
       categories: state.categories.map((c) => (c.id === category.id ? category : c)),
@@ -344,6 +540,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   removeCategory: async (categoryId) => {
+    get().saveToHistory(); // Save state before modifying
     await deleteCategory(categoryId);
     set((state) => ({
       categories: state.categories.filter((c) => c.id !== categoryId),
@@ -388,11 +585,13 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Habit Actions
   addHabit: async (habit) => {
+    get().saveToHistory(); // Save state before modifying
     await saveHabit(habit);
     set((state) => ({ habits: [...state.habits, habit] }));
   },
 
   updateHabit: async (habit) => {
+    get().saveToHistory(); // Save state before modifying
     await saveHabit(habit);
     set((state) => ({
       habits: state.habits.map((h) => (h.id === habit.id ? habit : h)),
@@ -400,6 +599,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   removeHabit: async (habitId) => {
+    get().saveToHistory(); // Save state before modifying
     await deleteHabit(habitId);
     set((state) => ({
       habits: state.habits.filter((h) => h.id !== habitId),
@@ -408,6 +608,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleHabitLog: async (habitId, date) => {
+    get().saveToHistory(); // Save state before modifying
     const state = get();
     const existingLog = state.habitLogs.find(
       (l) => l.habitId === habitId && l.date === date
@@ -488,6 +689,57 @@ export const useStore = create<AppState>((set, get) => ({
       completionRate,
       totalCompleted: habitLogs.length,
     };
+  },
+
+  // Task Template Actions
+  addTaskTemplate: async (template) => {
+    await saveTaskTemplate(template);
+    set((state) => ({ taskTemplates: [...state.taskTemplates, template] }));
+  },
+
+  updateTaskTemplate: async (template) => {
+    await saveTaskTemplate(template);
+    set((state) => ({
+      taskTemplates: state.taskTemplates.map((t) => (t.id === template.id ? template : t)),
+    }));
+  },
+
+  removeTaskTemplate: async (templateId) => {
+    await deleteTaskTemplate(templateId);
+    set((state) => ({
+      taskTemplates: state.taskTemplates.filter((t) => t.id !== templateId),
+    }));
+  },
+
+  createTaskFromTemplate: async (templateId, date) => {
+    const state = get();
+    const template = state.taskTemplates.find((t) => t.id === templateId);
+    if (!template) return;
+
+    const now = date.startOf('day');
+    const startTime = now.clone().add(9, 'hour').toISOString(); // 默认 9:00
+    const endTime = now.clone().add(9, 'hour').add(template.defaultDuration, 'minute').toISOString();
+
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      title: template.name,
+      description: template.description,
+      categoryId: template.categoryId,
+      priority: 'none',
+      startTime,
+      endTime,
+      isAllDay: template.isAllDay,
+      isCompleted: false,
+      isRecurring: false,
+      reminder: template.reminderEnabled
+        ? { enabled: true, beforeMinutes: template.reminderBeforeMinutes }
+        : undefined,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    await saveTask(newTask);
+    set((state) => ({ tasks: [...state.tasks, newTask] }));
   },
 
   // Helper functions

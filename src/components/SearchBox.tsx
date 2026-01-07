@@ -3,7 +3,7 @@ import { useStore } from '../store';
 import dayjs from 'dayjs';
 
 export const SearchBox: React.FC = () => {
-  const { tasks, categories, openAddTask } = useStore();
+  const { tasks, categories, openEditTask, setCurrentDate, setViewMode } = useStore();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -17,6 +17,15 @@ export const SearchBox: React.FC = () => {
 
   const getCategory = (categoryId?: string) => {
     return categories.find((c) => c.id === categoryId);
+  };
+
+  const handleTaskClick = (task: typeof tasks[0]) => {
+    // Navigate to the task's date and open edit
+    const taskDate = dayjs(task.startTime);
+    setCurrentDate(taskDate);
+    setViewMode('day');
+    openEditTask(task.id);
+    setQuery('');
   };
 
   return (
@@ -58,10 +67,7 @@ export const SearchBox: React.FC = () => {
                 return (
                   <li key={task.id}>
                     <button
-                      onClick={() => {
-                        setQuery('');
-                        openAddTask();
-                      }}
+                      onClick={() => handleTaskClick(task)}
                       className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
                     >
                       <div
@@ -74,8 +80,12 @@ export const SearchBox: React.FC = () => {
                         </p>
                         <p className="text-xs text-gray-500">
                           {dayjs(task.startTime).format('MMM D, h:mm A')}
+                          {task.categoryId && ` · ${category?.name}`}
                         </p>
                       </div>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </li>
                 );
@@ -84,15 +94,6 @@ export const SearchBox: React.FC = () => {
           ) : (
             <div className="px-4 py-6 text-center">
               <p className="text-sm text-gray-500">No tasks found</p>
-              <button
-                onClick={() => {
-                  setQuery('');
-                  openAddTask();
-                }}
-                className="mt-2 text-sm text-primary-500 hover:text-primary-600 font-medium"
-              >
-                Create a new task
-              </button>
             </div>
           )}
         </div>

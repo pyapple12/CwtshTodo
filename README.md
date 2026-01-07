@@ -1,6 +1,6 @@
 # CwtshTodo
 
-![Version](https://img.shields.io/badge/version-0.04--beta-blue.svg)
+![Version](https://img.shields.io/badge/version-0.08--beta-blue.svg)
 ![Node.js](https://img.shields.io/badge/node-18+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-beta-green.svg)
@@ -24,7 +24,7 @@ CwtshTodo 是一款面向**神经多样性人群（ADHD）**设计的**纯网页
 | 模块 | 状态 | 说明 |
 |------|------|------|
 | 项目骨架 | ✅ | Vite + React 18 + TypeScript + Tailwind CSS |
-| 侧边栏导航 | ✅ | 8个导航项 + 汉堡菜单（移动端） |
+| 侧边栏导航 | ✅ | 10个导航项 + 汉堡菜单（移动端） |
 | 仪表板布局 | ✅ | 网格系统，左右双栏布局（响应式） |
 | 进度图表 | ✅ | 渐变色进度条（绿→青→黄→橙→红→紫）+ 网格背景 |
 | 分类列表 | ✅ | 动态分类数据 + 图标 + 颜色 |
@@ -42,8 +42,17 @@ CwtshTodo 是一款面向**神经多样性人群（ADHD）**设计的**纯网页
 | Tasks 页面 | ✅ | 全部任务列表 + 筛选 + 批量操作 |
 | Focus 专注模式 | ✅ | 番茄钟计时器 + 专注统计 |
 | Calendar 完整日历 | ✅ | 月视图 + 周视图 + 日期跳转 |
+| Habits 习惯追踪 | ✅ | 习惯打卡 + 连续天数 + 完成率统计 |
+| Stats 数据统计 | ✅ | 周/月完成率 + 专注时长趋势 + 分类统计 |
+| 任务模板 | ✅ | 模板创建/管理 + 从模板快速创建 |
+| 报告生成 | ✅ | 周报/月报 + 成就系统 + 分享功能 |
+| 键盘快捷键 | ✅ | n-新建任务、s-设置、/-数据管理、?-快捷键面板 |
+| 自动备份 | ✅ | 每日/每周备份 + 保留数量设置 |
+| 通知增强 | ✅ | 任务中提醒 + 过期提醒 + 专注提醒 |
 | PWA 支持 | ✅ | Service Worker + Manifest + 离线缓存 |
 | 移动端适配 | ✅ | 响应式布局 + 底部导航 + 触摸优化 |
+| 交互增强 | ✅ | 滑动操作 + 长按菜单 + 紧凑模式 |
+| 主题系统 | ✅ | 浅色/深色/跟随系统 |
 
 ### 项目结构
 
@@ -56,8 +65,10 @@ CwtshTodo/
 │   ├── types/index.ts        # 类型定义 (Task, Category, Reminder...)
 │   ├── utils/db.ts           # IndexedDB 存储层
 │   ├── store/index.ts        # Zustand 状态管理
+│   ├── services/notifications.ts # 浏览器通知服务
 │   └── components/
 │       ├── Sidebar.tsx       # 左侧导航栏（桌面端）
+│       ├── BottomNav.tsx     # 底部导航栏（移动端）
 │       ├── Dashboard.tsx     # 仪表板布局
 │       ├── ProgressChart.tsx # 渐变进度条
 │       ├── CategoryList.tsx  # 分类列表
@@ -71,11 +82,15 @@ CwtshTodo/
 │       ├── DataManagement.tsx # 数据导入导出
 │       ├── DnDProvider.tsx   # 拖拽上下文
 │       ├── DraggableTaskCard.tsx # 可拖拽任务卡片
+│       ├── SwipeableTaskCard.tsx # 滑动任务卡片
+│       ├── ContextMenu.tsx   # 右键菜单
 │       ├── ScheduleView.tsx  # Schedule 页面（时间轴视图）
 │       ├── AllTasks.tsx      # Tasks 页面（全部任务列表）
 │       ├── FocusMode.tsx     # Focus 专注模式（番茄钟）
 │       ├── FullCalendar.tsx  # Calendar 完整日历
-│       └── BottomNav.tsx     # 底部导航栏（移动端）
+│       ├── Habits.tsx        # Habits 习惯追踪
+│       ├── Stats.tsx         # Stats 数据统计
+│       └── Loading.tsx       # 加载状态组件
 ├── public/
 │   └── icons/                # PWA 图标
 ├── scripts/
@@ -100,19 +115,26 @@ CwtshTodo/
 
 ### 中期任务
 
-- [ ] **体验优化 (v0.05)**
-  - 深色模式实现
-  - 任务表单日期选择
-  - 专注数据持久化
-  - 快捷键与手势支持
+- [ ] **交互优化 (v0.09)**
+  - 修复日历卡片"Add Event"按钮
+  - 修复分类列表交互功能
+  - 连接真实数据到进度图表
+  - 连接真实数据到环形计时器
+  - 任务搜索结果点击跳转
 
 ### 长期任务
 
-- [ ] **高级功能 (v0.06)**
-  - 浏览器通知 API
-  - 任务完成统计
-  - 分类时间分布
-  - 习惯追踪与打卡
+- [ ] **高级功能 (v0.10)**
+  - 任务导出为图片（Canvas 渲染）
+  - 自定义快捷键
+  - 邮件发送报告
+  - 任务分享链接生成
+  - 任务优先级设置
+  - 任务标签/标签页
+  - 撤销/重做功能
+  - 白噪音专注背景音
+  - 专注计时器自定义时长
+  - 国际化（中英文切换）
 
 - [ ] **云端同步（可选）**
   - Firebase 集成
@@ -174,7 +196,7 @@ CwtshTodo is a **pure web-based visual schedule management tool** designed for *
 | Module | Status | Description |
 |--------|--------|-------------|
 | Project Setup | ✅ | Vite + React 18 + TypeScript + Tailwind CSS |
-| Sidebar Navigation | ✅ | 8 nav items + hamburger menu (mobile) |
+| Sidebar Navigation | ✅ | 10 nav items + hamburger menu (mobile) |
 | Dashboard Layout | ✅ | Grid system, responsive dual-column layout |
 | Progress Chart | ✅ | Gradient progress bar + grid background |
 | Category List | ✅ | Dynamic categories with icons and colors |
@@ -192,8 +214,17 @@ CwtshTodo is a **pure web-based visual schedule management tool** designed for *
 | Tasks Page | ✅ | All tasks list + filter + batch operations |
 | Focus Mode | ✅ | Pomodoro timer + focus statistics |
 | Full Calendar | ✅ | Month view + Week view + date navigation |
+| Habits Tracking | ✅ | Habit check-in + streak + completion rate |
+| Stats Page | ✅ | Weekly/Monthly stats + focus trends + category stats |
+| Task Templates | ✅ | Template creation + quick task from template |
+| Report Generation | ✅ | Weekly/Monthly reports + achievements + sharing |
+| Keyboard Shortcuts | ✅ | n-Add task, s-Settings, /-Data, ?-Shortcuts panel |
+| Auto Backup | ✅ | Daily/Weekly backup + retention settings |
+| Notification Enhanced | ✅ | Mid-task reminder + expiry reminder + focus reminder |
 | PWA Support | ✅ | Service Worker + Manifest + offline cache |
 | Mobile Adaptation | ✅ | Responsive + bottom nav + touch optimization |
+| Interaction Enhanced | ✅ | Swipe actions + long-press menu + compact mode |
+| Theme System | ✅ | Light/Dark/System theme |
 
 ### Project Structure
 
@@ -206,8 +237,10 @@ CwtshTodo/
 │   ├── types/index.ts        # TypeScript types
 │   ├── utils/db.ts           # IndexedDB storage
 │   ├── store/index.ts        # Zustand state management
+│   ├── services/notifications.ts # Browser notification service
 │   └── components/
 │       ├── Sidebar.tsx       # Left sidebar (desktop)
+│       ├── BottomNav.tsx     # Bottom navigation (mobile)
 │       ├── Dashboard.tsx     # Dashboard layout
 │       ├── ProgressChart.tsx # Gradient progress bar
 │       ├── CategoryList.tsx  # Category list
@@ -221,11 +254,15 @@ CwtshTodo/
 │       ├── DataManagement.tsx # Import/Export
 │       ├── DnDProvider.tsx   # Drag & Drop context
 │       ├── DraggableTaskCard.tsx # Draggable task card
+│       ├── SwipeableTaskCard.tsx # Swipeable task card
+│       ├── ContextMenu.tsx   # Context menu
 │       ├── ScheduleView.tsx  # Schedule page (timeline view)
 │       ├── AllTasks.tsx      # Tasks page (all tasks list)
 │       ├── FocusMode.tsx     # Focus mode (Pomodoro)
 │       ├── FullCalendar.tsx  # Full calendar
-│       └── BottomNav.tsx     # Bottom navigation (mobile)
+│       ├── Habits.tsx        # Habits tracking
+│       ├── Stats.tsx         # Stats page
+│       └── Loading.tsx       # Loading component
 ├── public/
 │   └── icons/                # PWA icons
 ├── scripts/
@@ -250,10 +287,11 @@ None
 
 ### Mid-term
 
-- [ ] **Advanced Reminders**
-  - Browser notification API
-  - Task halfway reminder
-  - Task ending soon reminder
+- [ ] **Advanced Features (v0.09)**
+  - Export tasks as image (Canvas rendering)
+  - Custom keyboard shortcuts
+  - Email report sending
+  - Task share link generation
 
 ### Long-term
 
@@ -262,12 +300,6 @@ None
   - User authentication
   - Encrypted data transfer
   - Multi-device sync
-
-- [ ] **Data Analysis**
-  - Task completion statistics
-  - Category time distribution
-  - Focus duration report
-  - Data visualization
 
 ## Tech Stack
 
