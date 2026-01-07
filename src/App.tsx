@@ -7,6 +7,7 @@ import { AllTasks } from './components/AllTasks';
 import { FocusMode } from './components/FocusMode';
 import { FullCalendar } from './components/FullCalendar';
 import { Habits } from './components/Habits';
+import { Stats } from './components/Stats';
 import { DataManagement } from './components/DataManagement';
 import { Settings } from './components/Settings';
 import { CategoryManage } from './components/CategoryManage';
@@ -51,6 +52,8 @@ function App() {
         return <FullCalendar />;
       case 'habits':
         return <Habits />;
+      case 'stats':
+        return <Stats />;
       case 'categories':
         return <Dashboard />; // Categories is handled via modal
       case 'backup':

@@ -9,17 +9,20 @@ interface TaskFormProps {
 }
 
 export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
-  const { addTask, updateTask, categories } = useStore();
+  const { addTask, updateTask, categories, settings } = useStore();
 
   // Date selection - default to currentDate, but can be changed
   const [selectedDate, setSelectedDate] = useState(dayjs());
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState(settings.defaultCategoryId);
   const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [isAllDay, setIsAllDay] = useState(false);
+  const [endTime, setEndTime] = useState(() => {
+    const end = dayjs().startOf('hour').add(settings.defaultDuration, 'minute');
+    return end.format('HH:mm');
+  });
+  const [isAllDay, setIsAllDay] = useState(settings.defaultIsAllDay);
 
   // Recurring state
   const [isRecurring, setIsRecurring] = useState(false);
@@ -28,8 +31,8 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
   const [recurringEndDate, setRecurringEndDate] = useState('');
 
   // Reminder state
-  const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState(10);
+  const [reminderEnabled, setReminderEnabled] = useState(settings.defaultReminder);
+  const [reminderMinutes, setReminderMinutes] = useState(settings.reminderBeforeMinutes);
 
   useEffect(() => {
     if (taskToEdit) {

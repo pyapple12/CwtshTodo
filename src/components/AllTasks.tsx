@@ -6,10 +6,11 @@ import dayjs from 'dayjs';
 type FilterStatus = 'all' | 'pending' | 'completed' | 'overdue';
 
 export const AllTasks: React.FC = () => {
-  const { tasks, categories, toggleTaskComplete, removeTask, selectedCategoryId, setSelectedCategory } = useStore();
+  const { tasks, categories, toggleTaskComplete, removeTask, updateTask, selectedCategoryId, setSelectedCategory } = useStore();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [sortBy, setSortBy] = useState<'date' | 'category'>('date');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>('');
 
   // Filter tasks
   const filteredTasks = useMemo(() => {
@@ -89,6 +90,19 @@ export const AllTasks: React.FC = () => {
       }
       setSelectedTasks(new Set());
     }
+  };
+
+  const bulkUpdateCategory = async () => {
+    if (!bulkCategoryId || selectedTasks.size === 0) return;
+
+    for (const taskId of selectedTasks) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        await updateTask({ ...task, categoryId: bulkCategoryId, updatedAt: Date.now() });
+      }
+    }
+    setSelectedTasks(new Set());
+    setBulkCategoryId('');
   };
 
   const pendingCount = tasks.filter(t => !t.isCompleted && dayjs(t.startTime).isAfter(dayjs(), 'day')).length;
@@ -173,25 +187,47 @@ export const AllTasks: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 p-4 bg-primary-50 rounded-xl flex items-center justify-between"
+            className="mb-4 p-4 bg-primary-50 rounded-xl flex flex-wrap items-center gap-3"
           >
             <span className="text-primary-700 font-medium">
               已选择 {selectedTasks.size} 个任务
             </span>
-            <div className="flex gap-2">
-              <button
-                onClick={bulkComplete}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
-              >
-                批量完成
-              </button>
-              <button
-                onClick={bulkDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"
-              >
-                批量删除
-              </button>
-            </div>
+            <div className="flex-1" />
+
+            {/* Category selector for bulk update */}
+            <select
+              value={bulkCategoryId}
+              onChange={(e) => setBulkCategoryId(e.target.value)}
+              className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+            >
+              <option value="">批量修改分类</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={bulkUpdateCategory}
+              disabled={!bulkCategoryId}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              应用分类
+            </button>
+
+            <button
+              onClick={bulkComplete}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+            >
+              批量完成
+            </button>
+            <button
+              onClick={bulkDelete}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"
+            >
+              批量删除
+            </button>
           </motion.div>
         )}
 

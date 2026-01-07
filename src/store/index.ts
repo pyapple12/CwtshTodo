@@ -33,6 +33,11 @@ export interface AppSettings {
   defaultView: ViewMode;
   startOfWeek: number; // 0=周日, 1=周一
   compactMode: boolean; // 紧凑模式
+  // 默认任务设置
+  defaultCategoryId: string; // 默认分类
+  defaultIsAllDay: boolean; // 默认全天任务
+  defaultReminder: boolean; // 默认开启提醒
+  defaultDuration: number; // 默认任务时长（分钟）
 }
 
 // Theme utility functions
@@ -187,6 +192,11 @@ export const useStore = create<AppState>((set, get) => ({
     defaultView: 'day',
     startOfWeek: 1, // 周一开始
     compactMode: false,
+    // 默认任务设置
+    defaultCategoryId: '',
+    defaultIsAllDay: false,
+    defaultReminder: false,
+    defaultDuration: 60,
   },
 
   // Actions
@@ -221,6 +231,10 @@ export const useStore = create<AppState>((set, get) => ({
         defaultView: 'day',
         startOfWeek: 1,
         compactMode: false,
+        defaultCategoryId: '',
+        defaultIsAllDay: false,
+        defaultReminder: false,
+        defaultDuration: 60,
       },
     });
   },

@@ -8,7 +8,7 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
-  const { settings, setTheme, updateSettings, clearAllData, tasks } = useStore();
+  const { settings, setTheme, updateSettings, clearAllData, tasks, categories } = useStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const themeOptions: { value: ThemeMode; label: string; icon: string }[] = [
@@ -185,6 +185,76 @@ export const Settings: React.FC<SettingsProps> = ({ onClose }) => {
                 className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
               />
             </label>
+          </div>
+
+          {/* Default Task Settings */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">默认任务设置</h3>
+
+            {/* Default Category */}
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 mb-2">默认分类</label>
+              <select
+                value={settings.defaultCategoryId}
+                onChange={(e) => updateSettings({ defaultCategoryId: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              >
+                <option value="">无</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Default Duration */}
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 mb-2">默认任务时长</label>
+              <select
+                value={settings.defaultDuration}
+                onChange={(e) => updateSettings({ defaultDuration: Number(e.target.value) })}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              >
+                <option value={30}>30 分钟</option>
+                <option value={45}>45 分钟</option>
+                <option value={60}>1 小时</option>
+                <option value={90}>1.5 小时</option>
+                <option value={120}>2 小时</option>
+              </select>
+            </div>
+
+            {/* Default All-day */}
+            <div className="mb-4">
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">📅</span>
+                  <span className="text-gray-700">默认全天任务</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.defaultIsAllDay}
+                  onChange={(e) => updateSettings({ defaultIsAllDay: e.target.checked })}
+                  className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+                />
+              </label>
+            </div>
+
+            {/* Default Reminder */}
+            <div>
+              <label className="flex items-center justify-between cursor-pointer p-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🔔</span>
+                  <span className="text-gray-700">默认开启提醒</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.defaultReminder}
+                  onChange={(e) => updateSettings({ defaultReminder: e.target.checked })}
+                  className="w-5 h-5 text-primary-500 rounded focus:ring-primary-500"
+                />
+              </label>
+            </div>
           </div>
 
           {/* Data Stats */}

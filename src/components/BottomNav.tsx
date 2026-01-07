@@ -25,6 +25,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeItem, onItemClick })
     { id: 'schedule', label: 'Schedule', icon: '📅' },
     { id: 'tasks', label: 'Tasks', icon: '✅' },
     { id: 'focus', label: 'Focus', icon: '🎯' },
+    { id: 'stats', label: 'Stats', icon: '📊' },
     { id: 'habits', label: 'Habits', icon: '✨' },
   ];
 

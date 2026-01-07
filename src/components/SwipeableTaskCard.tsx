@@ -36,11 +36,19 @@ export const SwipeableTaskCard: React.FC<SwipeableTaskCardProps> = ({
     if (touchStartX.current === null) return;
 
     if (swipeX < -SWIPE_THRESHOLD) {
+      // Haptic feedback for delete
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
       // Swipe left - delete
       if (window.confirm('确定要删除这个任务吗？')) {
         removeTask(task.id);
       }
     } else if (swipeX > SWIPE_THRESHOLD) {
+      // Haptic feedback for complete
+      if (navigator.vibrate) {
+        navigator.vibrate(30);
+      }
       // Swipe right - complete
       toggleTaskComplete(task.id);
     }
