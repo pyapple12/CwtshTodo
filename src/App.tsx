@@ -23,7 +23,7 @@ import { useEffect } from 'react';
 
 function App() {
   // All hooks must be called unconditionally at the top
-  const { isLoading, loadData, isSettingsOpen, closeSettings, isCategoryManageOpen, closeCategoryManage, isShortcutsModalOpen } = useStore();
+  const { isLoading, loadData, isSettingsOpen, closeSettings, isCategoryManageOpen, closeCategoryManage, isShortcutsModalOpen, openSettings, openCategoryManage } = useStore();
 
   // Load data on mount
   useEffect(() => {
@@ -60,24 +60,27 @@ function App() {
       case 'stats':
         return <Stats />;
       case 'categories':
-        return <Dashboard />; // Categories is handled via modal
-      case 'templates':
-        setShowTemplates(true);
-        return <Dashboard />;
-      case 'reports':
-        setShowReports(true);
-        return <Dashboard />;
+      case 'settings':
+        return <Dashboard />; // These are handled via modal
       case 'backup':
         return <DataManagement />;
-      case 'settings':
-        return <Dashboard />; // Settings is handled via modal
       default:
         return <Dashboard />;
     }
   };
 
   const handleItemClick = (itemId: string) => {
-    setActiveItem(itemId);
+    if (itemId === 'settings') {
+      openSettings();
+    } else if (itemId === 'categories') {
+      openCategoryManage();
+    } else if (itemId === 'reports' || itemId === 'templates') {
+      // These are modals, don't change activeItem
+      if (itemId === 'reports') setShowReports(true);
+      if (itemId === 'templates') setShowTemplates(true);
+    } else {
+      setActiveItem(itemId);
+    }
     setIsMobileMenuOpen(false);
   };
 
