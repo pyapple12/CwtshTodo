@@ -21,6 +21,7 @@ export const FocusMode: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Get today's incomplete tasks
   const todayTasks = tasks.filter(t => {
@@ -31,10 +32,17 @@ export const FocusMode: React.FC = () => {
   // Calculate today's focus time from store
   const todayFocusTime = getTodayFocusTime();
 
-  // Memoized playSound function
+  // Get or create shared AudioContext
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return audioContextRef.current;
+  }, []);
+
+  // Memoized playSound function with shared AudioContext
   const playSound = useCallback(() => {
-    // Create a simple beep sound
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = getAudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -44,6 +52,15 @@ export const FocusMode: React.FC = () => {
     osc.start();
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
     setTimeout(() => osc.stop(), 500);
+  }, [getAudioContext]);
+
+  // Cleanup AudioContext on unmount
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
