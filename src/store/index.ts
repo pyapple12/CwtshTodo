@@ -564,6 +564,10 @@ export const useStore = create<AppState>((set, get) => ({
     await deleteCategory(categoryId);
     set((state) => ({
       categories: state.categories.filter((c) => c.id !== categoryId),
+      // Clean up task references to this category
+      tasks: state.tasks.map((t) =>
+        t.categoryId === categoryId ? { ...t, categoryId: undefined, updatedAt: Date.now() } : t
+      ),
     }));
   },
 
