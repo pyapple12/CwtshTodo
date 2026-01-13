@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Task } from '../types';
@@ -30,6 +30,21 @@ export const FocusMode: React.FC = () => {
 
   // Calculate today's focus time from store
   const todayFocusTime = getTodayFocusTime();
+
+  // Memoized playSound function
+  const playSound = useCallback(() => {
+    // Create a simple beep sound
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 800;
+    gain.gain.value = 0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    setTimeout(() => osc.stop(), 500);
+  }, []);
 
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
@@ -79,21 +94,7 @@ export const FocusMode: React.FC = () => {
         clearTimeout(timerRef.current);
       }
     };
-  }, [isRunning, timeLeft, mode, completedPomodoros, selectedTask]);
-
-  const playSound = () => {
-    // Create a simple beep sound
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 800;
-    gain.gain.value = 0.3;
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    setTimeout(() => osc.stop(), 500);
-  };
+  }, [isRunning, timeLeft, mode, completedPomodoros, selectedTask, addFocusSession, toggleTaskComplete, playSound]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
