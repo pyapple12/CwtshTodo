@@ -16,6 +16,7 @@ export const FullCalendar: React.FC = () => {
     selectedCategoryId,
     setSelectedCategory,
     updateTask,
+    settings,
   } = useStore();
 
   const [viewMode, setLocalViewMode] = React.useState<CalendarViewMode>('month');
@@ -82,9 +83,10 @@ export const FullCalendar: React.FC = () => {
 
   // Generate week calendar days
   const weekDays = useMemo(() => {
-    const startOfWeek = currentDate.startOf('week');
+    // Use user's preferred week start day (0 = Sunday, 1 = Monday)
+    const startOfWeek = currentDate.startOf('week').day(settings.startOfWeek);
     return Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, 'day'));
-  }, [currentDate]);
+  }, [currentDate, settings.startOfWeek]);
 
   const weekTaskMap = useMemo(() => {
     return getTasksForWeek(currentDate.startOf('week'));

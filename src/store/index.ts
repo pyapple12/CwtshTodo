@@ -588,7 +588,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   getWeekFocusStats: () => {
     const state = get();
-    const weekStart = dayjs().startOf('week');
+    // Use user's preferred week start day (0 = Sunday, 1 = Monday)
+    const weekStart = dayjs().startOf('week').day(state.settings.startOfWeek);
     const daily: number[] = [];
 
     for (let i = 0; i < 7; i++) {
