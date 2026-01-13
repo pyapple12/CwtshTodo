@@ -311,6 +311,17 @@ export const useStore = create<AppState>((set, get) => ({
     applyTheme(initialTheme);
     initThemeListener();
 
+    // Get saved settings from localStorage
+    const savedSettingsStr = localStorage.getItem('cwtshtodo-settings');
+    let savedSettings: Partial<AppSettings> | null = null;
+    if (savedSettingsStr) {
+      try {
+        savedSettings = JSON.parse(savedSettingsStr);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
     const [tasks, categories, focusSessions, habits, habitLogs, taskTemplates] = await Promise.all([
       getAllTasks(),
       getAllCategories(),
@@ -346,6 +357,8 @@ export const useStore = create<AppState>((set, get) => ({
         reminderMidway: false,
         reminderBeforeEnd: true,
         reminderFocusSession: true,
+        // Merge saved settings on top of defaults
+        ...savedSettings,
       },
     });
   },
@@ -376,6 +389,9 @@ export const useStore = create<AppState>((set, get) => ({
         settings: { ...state.settings, ...newSettings },
       };
 
+      // Save settings to localStorage
+      localStorage.setItem('cwtshtodo-settings', JSON.stringify(newState.settings));
+
       // Apply theme if it was changed
       if (newSettings.theme !== undefined) {
         applyTheme(newSettings.theme);
@@ -388,6 +404,8 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => {
       const newSettings = { ...state.settings, theme };
       applyTheme(theme);
+      // Save settings to localStorage
+      localStorage.setItem('cwtshtodo-settings', JSON.stringify(newSettings));
       return { settings: newSettings };
     });
   },
@@ -401,6 +419,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   clearAllData: async () => {
     await clearAllData();
+    // Clear saved settings
+    localStorage.removeItem('cwtshtodo-settings');
     set({
       tasks: [],
       categories: DEFAULT_CATEGORIES,
