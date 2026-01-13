@@ -17,7 +17,7 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string; bgC
 ];
 
 export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
-  const { addTask, updateTask, categories, settings } = useStore();
+  const { addTask, updateTask, removeTask, categories, settings } = useStore();
 
   // Date selection - default to currentDate, but can be changed
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -122,8 +122,8 @@ export const TaskForm: React.FC<TaskFormProps> = ({ taskToEdit, onClose }) => {
   };
 
   const handleDelete = async () => {
-    if (taskToEdit && window.confirm('确定要删除这个任务吗？')) {
-      await updateTask({ ...taskToEdit, isCompleted: true }); // Soft delete
+    if (taskToEdit && window.confirm('确定要删除这个任务吗？此操作不可恢复。')) {
+      await removeTask(taskToEdit.id); // Hard delete
       onClose();
     }
   };
