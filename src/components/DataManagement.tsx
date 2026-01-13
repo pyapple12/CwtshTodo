@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../store';
-import { exportData, importData, clearAllData } from '../utils/db';
+import { exportAllData, importData, importAllData, clearAllData } from '../utils/db';
 
 export const DataManagement: React.FC = () => {
   const { loadData } = useStore();
@@ -14,7 +14,7 @@ export const DataManagement: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const data = await exportData();
+      const data = await exportAllData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -41,7 +41,13 @@ export const DataManagement: React.FC = () => {
         return;
       }
 
-      await importData(data);
+      // Use full import if data contains all data types
+      if (data.habits || data.focusSessions || data.taskTemplates) {
+        await importAllData(data);
+      } else {
+        await importData(data);
+      }
+
       await loadData();
       showMessage('数据导入成功！');
     } catch {
