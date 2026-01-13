@@ -1,11 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../store';
 import { exportAllData, importData, importAllData, clearAllData } from '../utils/db';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export const DataManagement: React.FC = () => {
   const { loadData } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const showMessage = (text: string) => {
     setMessage(text);
@@ -61,14 +63,17 @@ export const DataManagement: React.FC = () => {
   };
 
   const handleClear = async () => {
-    if (window.confirm('确定要清空所有数据吗？此操作不可恢复！')) {
-      try {
-        await clearAllData();
-        await loadData();
-        showMessage('数据已清空');
-      } catch {
-        showMessage('清空失败，请重试');
-      }
+    setShowClearConfirm(true);
+  };
+
+  const handleConfirmClear = async () => {
+    setShowClearConfirm(false);
+    try {
+      await clearAllData();
+      await loadData();
+      showMessage('数据已清空');
+    } catch {
+      showMessage('清空失败，请重试');
     }
   };
 
@@ -154,6 +159,15 @@ export const DataManagement: React.FC = () => {
           {message}
         </div>
       )}
+
+      {/* Clear Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        title="确认清除所有数据？"
+        message="此操作不可恢复，所有任务和分类将被删除。"
+        onConfirm={handleConfirmClear}
+        onCancel={() => setShowClearConfirm(false)}
+      />
     </div>
   );
 };
